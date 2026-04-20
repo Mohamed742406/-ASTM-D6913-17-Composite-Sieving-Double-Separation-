@@ -436,11 +436,14 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
               <option value="2">No.10 — 2.00 mm</option>
             </select>
           </div>
-          <div class="param-box input-yellow"><label>wfp (%) — محتوى الرطوبة</label><input type="number" id="s1_wfp" value="0" step="0.1" onchange="s1_calculate()"></div>
-          <div class="param-box input-yellow"><label>FP,Mm (جم) — وزن الجزء الناعم الرطب</label><input type="number" id="s1_fpmm" onchange="s1_calculate()"></div>
-          <div class="param-box input-yellow"><label>CP,Md (جم) — وزن الجزء الخشن الجاف</label><input type="number" id="s1_cpmd" onchange="s1_calculate()"></div>
-          <div class="param-box input-yellow"><label>SubS,Md (جم) — وزن العينة الفرعية الجاف</label><input type="number" id="s1_subsmd" onchange="s1_calculate()"></div>
-          <div class="param-box input-green"><label>FP,Md (جم) — محسوب</label><div class="calc-val" id="s1_fpmd_disp">—</div></div>
+          <!-- CP wet → dry -->
+          <div class="param-box input-yellow"><label>CP,Mm (جم) — وزن الجزء الخشن الرطب</label><input type="number" id="s1_cpmm" step="0.1" onchange="s1_calculate()" placeholder="وزن رطب"></div>
+          <div class="param-box input-yellow"><label>w_CP (%) — رطوبة الجزء الخشن</label><input type="number" id="s1_wcp" step="0.1" onchange="s1_calculate()" placeholder="% رطوبة"></div>
+          <div class="param-box input-green"><label>CP,Md (جم) — محسوب جاف</label><div class="calc-val" id="s1_cpmd_disp">—</div><input type="hidden" id="s1_cpmd" value="0"></div>
+          <!-- FP wet → dry -->
+          <div class="param-box input-yellow"><label>FP,Mm (جم) — وزن الجزء الناعم الرطب</label><input type="number" id="s1_fpmm" step="0.1" onchange="s1_calculate()" placeholder="وزن رطب"></div>
+          <div class="param-box input-yellow"><label>w_FP (%) — رطوبة الجزء الناعم</label><input type="number" id="s1_wfp" step="0.1" onchange="s1_calculate()" placeholder="% رطوبة"></div>
+          <div class="param-box input-green"><label>FP,Md (جم) — محسوب جاف</label><div class="calc-val" id="s1_fpmd_disp">—</div></div>
           <div class="param-box input-green"><label>S,Md (جم) — المجموع الكلي الجاف</label><div class="calc-val" id="s1_smd_disp">—</div></div>
           <div class="param-box" style="background:#f3e5ff"><label>CSCF (%)</label><div class="calc-val" id="s1_cscf_val" style="border-color:#9c5fc0;color:#5B2D8E;font-size:16px">—</div></div>
         </div>
@@ -477,10 +480,23 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
       <div class="card">
         <div class="card-header bg-blue" id="s1_sub_header">🔬 SubS — العينة الفرعية (من Sep إلى No.200)</div>
         <div class="card-body">
+          <!-- SubS weight + wash -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;background:#fff3e0;border-radius:8px;padding:10px 14px">
+            <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#8B4500;margin-bottom:4px">🚿 الغسيل على No.200 قبل النخل</div>
+            <div class="param-box input-yellow"><label>SubS,Md (جم) — وزن جاف قبل الغسيل</label><input type="number" id="s1_subsmd" step="0.1" onchange="s1_calculate()" placeholder="وزن جاف"></div>
+            <div class="param-box input-yellow"><label>وزن بعد الغسيل والتجفيف (جم)</label><input type="number" id="s1_sub_washed" step="0.1" onchange="s1_calculate()" placeholder="اختياري"></div>
+            <div id="s1_wash_bar" style="background:#fce4ec;border-radius:6px;padding:8px;display:none;flex-direction:column;justify-content:center;gap:4px">
+              <div style="font-size:10px;font-weight:700;color:#8B4500">فاقد الغسيل</div>
+              <div id="s1_wash_loss_disp" style="font-size:14px;font-weight:900;color:#c62828">—</div>
+              <div id="s1_wash_loss_pct"  style="font-size:11px;color:#555">—</div>
+              <div id="s1_sieve_check"    style="font-size:10px;font-weight:700;margin-top:2px">—</div>
+            </div>
+          </div>
+          <!-- Sieve table -->
+          <div style="font-size:11px;font-weight:700;color:#5B2D8E;margin-bottom:6px">🔩 النخل الجاف بعد الغسيل</div>
           <table>
             <thead><tr><th>المنخل</th><th>المقاس (mm)</th><th>FCMR (جم)</th><th>% مار جزئي</th></tr></thead>
             <tbody id="s1_sub_body">
-              <!-- dynamic rows based on Sep selection, plus fixed rows -->
               <tr id="s1_sub_sep_row" style="background:#f3e5ff"><td id="s1_sub_sep_lbl"><b>¾" (Sep)</b></td><td id="s1_sub_sep_mm"><b>19.0</b></td><td class="td-input"><input type="number" id="s1_sub_sep" value="0" onchange="s1_calculate()"></td><td id="s1_fp_sep">—</td></tr>
               <tr id="s1_sub_r95" ><td>⅜"</td><td>9.5</td><td class="td-input"><input type="number" id="s1_sub_95" value="0" onchange="s1_calculate()"></td><td id="s1_fp_95">—</td></tr>
               <tr id="s1_sub_r475"><td>No.4</td><td>4.75</td><td class="td-input"><input type="number" id="s1_sub_475" value="0" onchange="s1_calculate()"></td><td id="s1_fp_475">—</td></tr>
@@ -491,8 +507,9 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
             </tbody>
           </table>
           <div style="background:#f3e5ff;border-radius:6px;padding:10px;font-size:11px;margin-top:8px">
-            <b style="color:#5B2D8E">% مار جزئي</b> = (1 − FCMR ÷ SubS,Md) × 100<br>
-            <b style="color:#5B2D8E">% مار مجمع</b> = CSCF × (1 − FCMR ÷ SubS,Md)
+            <b style="color:#5B2D8E">% مار جزئي</b> = (1 − FCMR ÷ SubS,eff) × 100<br>
+            <b style="color:#5B2D8E">% مار مجمع</b> = CSCF × (1 − FCMR ÷ SubS,eff)<br>
+            <span style="color:#8B4500;font-size:10px">SubS,eff = وزن بعد الغسيل لو مدخول، وإلا SubS,Md</span>
           </div>
         </div>
       </div>
@@ -1375,17 +1392,54 @@ function s1_v(id){const x=parseFloat(document.getElementById(id)?.value);return 
 
 function s1_calculate(){
   const sep   = parseFloat(document.getElementById('s1_sep').value)||19;
+  const s1set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+
+  /* CP dry weight from wet + moisture */
+  const CP_Mm=parseFloat(document.getElementById('s1_cpmm').value);
+  const wcp  =parseFloat(document.getElementById('s1_wcp').value);
+  let CP_Md=0;
+  if(!isNaN(CP_Mm)&&CP_Mm>0&&!isNaN(wcp)&&wcp>=0){
+    CP_Md=CP_Mm/(1+wcp/100);
+    s1set('s1_cpmd_disp', CP_Md.toFixed(3)+' جم');
+    document.getElementById('s1_cpmd').value=CP_Md;
+  } else {
+    s1set('s1_cpmd_disp','—');
+    document.getElementById('s1_cpmd').value=0;
+  }
+
+  /* FP dry weight from wet + moisture */
   const wfp   = s1_v('s1_wfp');
   const FP_Mm = s1_v('s1_fpmm');
-  const CP_Md = s1_v('s1_cpmd');
-  const SubS  = s1_v('s1_subsmd');
-
   const FP_Md = FP_Mm / (1 + wfp/100);
   const S_Md  = CP_Md + FP_Md;
-
-  const s1set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   s1set('s1_fpmd_disp', S_Md>0?FP_Md.toFixed(3)+' جم':'—');
   s1set('s1_smd_disp',  S_Md>0?S_Md.toFixed(3)+' جم':'—');
+
+  /* SubS effective weight (washed dry if provided) */
+  const SubS    = s1_v('s1_subsmd');
+  const s1WashEl= document.getElementById('s1_sub_washed');
+  const s1WashV = s1WashEl?parseFloat(s1WashEl.value):NaN;
+  const SubSeff = (!isNaN(s1WashV)&&s1WashV>0)?s1WashV:SubS;
+
+  /* Wash loss bar */
+  const s1WashBar=document.getElementById('s1_wash_bar');
+  if(!isNaN(s1WashV)&&s1WashV>0&&SubS>0){
+    if(s1WashBar) s1WashBar.style.display='flex';
+    const lossGm=SubS-s1WashV, lossPct=(lossGm/SubS)*100;
+    s1set('s1_wash_loss_disp', lossGm.toFixed(2)+' جم');
+    s1set('s1_wash_loss_pct',  lossPct.toFixed(2)+'%');
+    const sieveSum=[s1_v('s1_sub_sep'),s1_v('s1_sub_95'),s1_v('s1_sub_475'),s1_v('s1_sub_2'),
+                    s1_v('s1_sub_0425'),s1_v('s1_sub_015'),s1_v('s1_sub_0075')].reduce((a,b)=>a+b,0);
+    const diff=sieveSum-s1WashV;
+    const adp=Math.abs(diff/s1WashV*100);
+    const chkEl=document.getElementById('s1_sieve_check');
+    if(chkEl){
+      chkEl.textContent=(adp<0.3?'✅':adp<1?'⚠️':'❌')+' مجموع المحجوز vs بعد الغسيل: '+(diff>=0?'+':'')+diff.toFixed(2)+' جم';
+      chkEl.style.color=adp<0.3?'#1F6B3A':adp<1?'#8B4500':'#c62828';
+    }
+  } else {
+    if(s1WashBar) s1WashBar.style.display='none';
+  }
 
   if(!S_Md){s1_showStatus('أدخل البيانات الأساسية أولاً',false);return;}
 
@@ -1422,7 +1476,7 @@ function s1_calculate(){
     '2':'s1_fp_2','0.425':'s1_fp_0425','0.15':'s1_fp_015','0.075':'s1_fp_0075'
   };
   Object.keys(subFCMR).forEach(k=>{
-    s1set(subPartialIds[k], SubS>0?fmtPct((1-subFCMR[k]/SubS)*100):'—');
+    s1set(subPartialIds[k], SubSeff>0?fmtPct((1-subFCMR[k]/SubSeff)*100):'—');
   });
 
   /* Build combined results table */
@@ -1452,7 +1506,7 @@ function s1_calculate(){
     } else {
       /* use SubS data */
       const fcmrKey = mm===9.5?'9.5':mm===4.75?'4.75':mm===2?'2':mm===0.425?'0.425':mm===0.15?'0.15':'0.075';
-      return CSCF*(1-subFCMR[fcmrKey]/SubS);
+      return CSCF*(1-subFCMR[fcmrKey]/SubSeff);
     }
   }
 
@@ -1462,17 +1516,26 @@ function s1_calculate(){
   const labelEq={
     cp:'% مار = (1 − CMR ÷ S,Md) × 100',
     sep:'CSCF = (1 − CP,CMR@Sep ÷ S,Md) × 100',
-    sub:'% مار = CSCF × (1 − FCMR ÷ SubS,Md)'
+    sub:'% مار = CSCF × (1 − FCMR ÷ SubS,eff)'
   };
 
+  /* collect rows and enforce monotonicity (passing % must decrease as mm decreases) */
+  const s1rows=[];
   allSieves.forEach(r=>{
     if(r.type==='cp'&&r.mm>sep) return;
-    const pp=combinedPass(r.mm);
+    s1rows.push({...r, pp: combinedPass(r.mm)});
+  });
+  let prevPass=100;
+  s1rows.forEach(r=>{
+    r.pp=Math.min(isNaN(r.pp)||!isFinite(r.pp)?prevPass:r.pp, prevPass);
+    prevPass=r.pp;
+  });
+  s1rows.forEach(r=>{
     const cls=r.type==='sub'?'td-calc':r.type==='sep'?'td-sep':'td-pass';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><b>${r.lbl}</b></td><td>${r.mm}</td><td class="td-input">—</td><td class="${cls}" data-s1mm="${r.mm}">${fmtPct(pp)}</td><td>${fmtPct(pp)}</td><td style="font-size:10px;color:#666;text-align:right">${labelEq[r.type]}</td>`;
+    tr.innerHTML=`<td><b>${r.lbl}</b></td><td>${r.mm}</td><td class="td-input">—</td><td class="${cls}" data-s1mm="${r.mm}">${fmtPct(r.pp)}</td><td>${fmtPct(r.pp)}</td><td style="font-size:10px;color:#666;text-align:right">${labelEq[r.type]}</td>`;
     body.appendChild(tr);
-    if(!isNaN(pp)&&isFinite(pp)) _s1GradData.push({mm:r.mm,pass:pp});
+    if(!isNaN(r.pp)&&isFinite(r.pp)) _s1GradData.push({mm:r.mm,pass:r.pp});
   });
 
   /* D10 / D30 / D60 / Cu / Cc */
@@ -1603,12 +1666,14 @@ function s1_showStatus(msg,ok){
 }
 
 function s1_resetForm(){
-  ['s1_wfp','s1_fpmm','s1_cpmd','s1_subsmd',
+  ['s1_cpmm','s1_wcp','s1_fpmm','s1_wfp','s1_subsmd','s1_sub_washed',
    's1_cp_75','s1_cp_63','s1_cp_50','s1_cp_375','s1_cp_25','s1_cp_sep',
    's1_sub_sep','s1_sub_95','s1_sub_475','s1_sub_2','s1_sub_0425','s1_sub_015','s1_sub_0075',
    's1_ll','s1_pl'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const s1hid=document.getElementById('s1_cpmd');if(s1hid)s1hid.value='0';
   document.getElementById('s1_plasticityFlag').value='auto';
-  ['s1_fpmd_disp','s1_smd_disp','s1_cscf_val'].forEach(id=>{
+  ['s1_fpmd_disp','s1_smd_disp','s1_cscf_val','s1_cpmd_disp',
+   's1_wash_loss_disp','s1_wash_loss_pct','s1_sieve_check'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.textContent='—';
   });
   ['s1_p_cp_75','s1_p_cp_63','s1_p_cp_50','s1_p_cp_375','s1_p_cp_25','s1_p_cp_sep',
