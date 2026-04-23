@@ -7,7 +7,7 @@
 
 ## 🌐 الموقع المباشر
 
-**[▶ افتح الحاسبة](https://your-deployment-url.vercel.app)**
+**[▶ افتح الحاسبة](https://mohamed742406.github.io/ASTM-D6913-Soil-Particle-Size-Distribution-Sieve-Analysis-Calculator/)**
 
 ---
 
