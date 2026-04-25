@@ -370,6 +370,23 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
               </select>
             </div>
           </div>
+          <!-- Organic detection row -->
+          <div style="margin-top:10px;background:#fff9c4;border-radius:6px;padding:8px 12px">
+            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH) — اختياري / Organic Check</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div>
+                <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Oven-Dried) %</label>
+                <input type="number" id="ll_od" value="" oninput="runClassification()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7" placeholder="LL بعد التجفيف">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Not Dried) %</label>
+                <input type="number" id="ll_nd" value="" oninput="runClassification()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7" placeholder="LL بدون تجفيف">
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;padding:8px;border:1px solid #f9a825">
+                <div id="od_ratio_display" style="text-align:center;font-size:11px;color:#555">النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Two classification results side by side -->
@@ -626,6 +643,23 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
                 <option value="auto">تلقائي (Auto)</option>
                 <option value="no">Non Plastic (NP)</option>
               </select>
+            </div>
+          </div>
+          <!-- Organic detection row -->
+          <div style="margin-top:10px;background:#fff9c4;border-radius:6px;padding:8px 12px">
+            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH) — اختياري</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div>
+                <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Oven-Dried) %</label>
+                <input type="number" id="s1_ll_od" value="" oninput="s1_runClassification()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Not Dried) %</label>
+                <input type="number" id="s1_ll_nd" value="" oninput="s1_runClassification()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7">
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;padding:6px;border:1px solid #f9a825">
+                <div id="s1_od_ratio_display" style="text-align:center;font-size:11px;color:#555">النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1512,12 +1546,30 @@ function classifySoil(){
     if(pl>=ll)
       return {symbol:'⚠️',name:'Inconsistent data',detail:'PL must be less than LL.'};
     const pi=ll-pl, aLine=0.73*(ll-20);
+
+    /* ── Organic check: LL(oven-dried)/LL(not-dried) < 0.75 ── */
+    const llOD=parseFloat(document.getElementById('ll_od')?.value);
+    const llND=parseFloat(document.getElementById('ll_nd')?.value);
+    const odRatio=(!isNaN(llOD)&&!isNaN(llND)&&llND>0)?llOD/llND:NaN;
+    const organic=!isNaN(odRatio)&&odRatio<0.75;
+
     let symbol='',name='';
     const borderline=(ll>=12&&ll<=25&&pi>=4&&pi<=7);
-    if(borderline){symbol='CL-ML';name='Lean Clay / Silt (Borderline)';}
-    else if(ll<50){symbol=pi>aLine?'CL':'ML';name=pi>aLine?'CL — Lean Clay (Low Plasticity)':'ML — Silt (Low Plasticity)';}
-    else {symbol=pi>aLine?'CH':'MH';name=pi>aLine?'CH — Fat Clay (High Plasticity)':'MH — Elastic Silt (High Plasticity)';}
-    return {symbol,name,detail:`LL=${ll.toFixed(1)}%, PL=${pl.toFixed(1)}%, PI=${pi.toFixed(1)}%, A-Line=${aLine.toFixed(1)}% — Fine-grained (ASTM D2487).`};
+    if(borderline){symbol='CL-ML';name='Silty clay (Borderline)';}
+    else if(ll<50){
+      const base=pi>aLine?'CL':'ML';
+      if(organic) symbol='OL';
+      else symbol=base;
+      name=organic?'OL — Organic Clay/Silt (Low Plasticity)':(pi>aLine?'CL — Lean Clay':'ML — Silt');
+    }
+    else {
+      const base=pi>aLine?'CH':'MH';
+      if(organic) symbol='OH';
+      else symbol=base;
+      name=organic?'OH — Organic Clay/Silt (High Plasticity)':(pi>aLine?'CH — Fat Clay':'MH — Elastic Silt');
+    }
+    const orgDetail=!isNaN(odRatio)?` — LL(OD)/LL(ND)=${odRatio.toFixed(2)}${organic?' < 0.75 → Organic':' ≥ 0.75 → Inorganic'}`:'';
+    return {symbol,name,detail:`LL=${ll.toFixed(1)}%, PL=${pl.toFixed(1)}%, PI=${pi.toFixed(1)}%, A-Line=${aLine.toFixed(1)}%${orgDetail} — Fine-grained (ASTM D2487).`};
   }
 
   /* ── Coarse-grained <50% passes No.200 ── */
@@ -1578,19 +1630,272 @@ function classifySoil(){
   return {symbol:sym,name:nameMap[sym]||sym,detail:detail+' — >12% fines.'};
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   getUSCSGroupName — Full ASTM D2487 Group Name from flowcharts
+   (Fig 1 coarse-grained, Fig 1 fine-grained, Fig 2 organic)
+   Parameters:
+     symbol   — USCS group symbol (e.g. 'GW', 'CL', 'ML', 'OL')
+     getFn    — function(mm) → % passing at that sieve size
+     ll       — Liquid Limit (number or NaN)
+     pl       — Plastic Limit (number or NaN)
+     odLL     — LL (oven-dried) / LL (not dried) ratio — for OL/OH detection
+                pass NaN if not available (organic check will be skipped)
+   Returns string — full group name per Table 1 footnotes K-Q
+   ═══════════════════════════════════════════════════════════════════ */
+function getUSCSGroupName(symbol, getFn, ll, pl, odLL){
+  /* ── Helper percentages ── */
+  const p200 = getFn(0.075);   /* % passing No.200 */
+  const p4   = getFn(4.75);    /* % passing No.4   */
+  const pPlus200 = isNaN(p200) ? NaN : 100 - p200;  /* % plus No.200 (retained) */
+
+  /* % gravel (retained on No.4) and % sand (between No.4 and No.200) */
+  const pGravel = (!isNaN(p4) && !isNaN(p200)) ? (100 - p4)   : NaN;
+  const pSand   = (!isNaN(p4) && !isNaN(p200)) ? (p4 - p200)  : NaN;
+
+  /* Organic check: LL(oven-dried)/LL(not-dried) < 0.75 → organic */
+  const isOrganic = !isNaN(odLL) && odLL < 0.75;
+
+  /* ── Footnote helpers (ASTM D2487 Table 1 footnotes K, L, M) ──
+     K: if soil contains 15% to <30% plus No.200, add "with sand" or "with gravel" whichever predominant
+     L: if ≥30% plus No.200, predominantly sand → add "sand" prefix
+     M: if ≥30% plus No.200, predominantly gravel → add "gravelly" prefix */
+  function fineGrainedSuffix(baseName){
+    if(isNaN(pPlus200)) return baseName;
+    if(pPlus200 < 15) return baseName;
+    if(pPlus200 >= 15 && pPlus200 < 30){
+      /* K: add "with sand" or "with gravel" */
+      if(!isNaN(pSand) && !isNaN(pGravel)){
+        return baseName + (pSand >= pGravel ? ' with sand' : ' with gravel');
+      }
+      return baseName;
+    }
+    /* ≥30% plus No.200 */
+    if(!isNaN(pSand) && !isNaN(pGravel)){
+      if(pSand > pGravel) return 'Sandy ' + baseName.toLowerCase();  /* L */
+      else                return 'Gravelly ' + baseName.toLowerCase(); /* M */
+    }
+    return baseName;
+  }
+
+  /* ── Fine-grained classification (≥50% passes No.200) ── */
+  /* Organic fine-grained soils */
+  if(symbol === 'OL'){
+    /* Figure 2: OL branch */
+    const pi = (!isNaN(ll) && !isNaN(pl) && pl < ll) ? ll - pl : NaN;
+    const aLine = (!isNaN(ll)) ? 0.73*(ll-20) : NaN;
+    if(!isNaN(pi) && !isNaN(aLine) && pi >= 4 && pi >= aLine){
+      return fineGrainedSuffix('Organic clay');
+    }
+    return fineGrainedSuffix('Organic silt');
+  }
+  if(symbol === 'OH'){
+    const pi = (!isNaN(ll) && !isNaN(pl) && pl < ll) ? ll - pl : NaN;
+    const aLine = (!isNaN(ll)) ? 0.73*(ll-20) : NaN;
+    if(!isNaN(pi) && !isNaN(aLine) && pi >= aLine){
+      return fineGrainedSuffix('Organic clay');
+    }
+    return fineGrainedSuffix('Organic silt');
+  }
+
+  /* Inorganic fine-grained */
+  if(symbol === 'CL'){
+    const pi = (!isNaN(ll) && !isNaN(pl) && pl < ll) ? ll - pl : NaN;
+    const aLine = (!isNaN(ll)) ? 0.73*(ll-20) : NaN;
+    /* Figure 1: LL<50, PI>7, on/above A-line → CL */
+    if(!isNaN(pPlus200) && pPlus200 < 30){
+      if(pPlus200 < 15) return 'Lean clay';
+      /* 15% ≤ plus No.200 < 30% */
+      if(!isNaN(pSand) && !isNaN(pGravel)){
+        if(pSand >= pGravel){
+          return pGravel < 15 ? 'Lean clay with sand' : 'Sandy lean clay with gravel';
+        } else {
+          return pSand < 15 ? 'Lean clay with gravel' : 'Gravelly lean clay with sand';
+        }
+      }
+      return 'Lean clay with sand';
+    }
+    /* ≥30% plus No.200 */
+    if(!isNaN(pSand) && !isNaN(pGravel)){
+      if(pSand >= pGravel){
+        return pGravel < 15 ? 'Sandy lean clay' : 'Sandy lean clay with gravel';
+      } else {
+        return pSand < 15 ? 'Gravelly lean clay' : 'Gravelly lean clay with sand';
+      }
+    }
+    return fineGrainedSuffix('Lean clay');
+  }
+
+  if(symbol === 'ML'){
+    if(!isNaN(pPlus200) && pPlus200 < 30){
+      if(pPlus200 < 15) return 'Silt';
+      if(!isNaN(pSand) && !isNaN(pGravel)){
+        if(pSand >= pGravel){
+          return pGravel < 15 ? 'Silt with sand' : 'Sandy silt with gravel';
+        } else {
+          return pSand < 15 ? 'Silt with gravel' : 'Gravelly silt with sand';
+        }
+      }
+      return 'Silt with sand';
+    }
+    if(!isNaN(pSand) && !isNaN(pGravel)){
+      if(pSand >= pGravel){
+        return pGravel < 15 ? 'Sandy silt' : 'Sandy silt with gravel';
+      } else {
+        return pSand < 15 ? 'Gravelly silt' : 'Gravelly silt with sand';
+      }
+    }
+    return fineGrainedSuffix('Silt');
+  }
+
+  if(symbol === 'CL-ML'){
+    return fineGrainedSuffix('Silty clay');
+  }
+
+  if(symbol === 'CH'){
+    if(!isNaN(pPlus200) && pPlus200 < 30){
+      if(pPlus200 < 15) return 'Fat clay';
+      if(!isNaN(pSand) && !isNaN(pGravel)){
+        if(pSand >= pGravel){
+          return pGravel < 15 ? 'Fat clay with sand' : 'Sandy fat clay with gravel';
+        } else {
+          return pSand < 15 ? 'Fat clay with gravel' : 'Gravelly fat clay with sand';
+        }
+      }
+      return 'Fat clay with sand';
+    }
+    if(!isNaN(pSand) && !isNaN(pGravel)){
+      if(pSand >= pGravel){
+        return pGravel < 15 ? 'Sandy fat clay' : 'Sandy fat clay with gravel';
+      } else {
+        return pSand < 15 ? 'Gravelly fat clay' : 'Gravelly fat clay with sand';
+      }
+    }
+    return fineGrainedSuffix('Fat clay');
+  }
+
+  if(symbol === 'MH'){
+    if(!isNaN(pPlus200) && pPlus200 < 30){
+      if(pPlus200 < 15) return 'Elastic silt';
+      if(!isNaN(pSand) && !isNaN(pGravel)){
+        if(pSand >= pGravel){
+          return pGravel < 15 ? 'Elastic silt with sand' : 'Sandy elastic silt with gravel';
+        } else {
+          return pSand < 15 ? 'Elastic silt with gravel' : 'Gravelly elastic silt with sand';
+        }
+      }
+      return 'Elastic silt with sand';
+    }
+    if(!isNaN(pSand) && !isNaN(pGravel)){
+      if(pSand >= pGravel){
+        return pGravel < 15 ? 'Sandy elastic silt' : 'Sandy elastic silt with gravel';
+      } else {
+        return pSand < 15 ? 'Gravelly elastic silt' : 'Gravelly elastic silt with sand';
+      }
+    }
+    return fineGrainedSuffix('Elastic silt');
+  }
+
+  /* ── Coarse-grained (Figure 3) ── */
+  /* % sand vs % gravel for coarse-grained suffix:
+     Footnote E/I: if ≥15% sand → "with sand"; if ≥15% gravel → "with gravel" */
+  function coarseSuffix(baseName, isGravelGroup){
+    /* For gravel groups: check % sand (Footnote E) */
+    /* For sand groups:   check % gravel (Footnote I) */
+    if(isGravelGroup){
+      if(!isNaN(pSand) && pSand >= 15) return baseName + ' with sand';
+    } else {
+      if(!isNaN(pGravel) && pGravel >= 15) return baseName + ' with gravel';
+    }
+    return baseName;
+  }
+
+  /* Clean coarse symbols (strip dual) */
+  const s = symbol;
+
+  /* GRAVEL group */
+  if(s==='GW')    return coarseSuffix('Well-graded gravel', true);
+  if(s==='GP')    return coarseSuffix('Poorly graded gravel', true);
+  if(s==='GW-GM') return coarseSuffix('Well-graded gravel with silt', true);
+  if(s==='GW-GC') return coarseSuffix('Well-graded gravel with clay', true);
+  if(s==='GP-GM') return coarseSuffix('Poorly graded gravel with silt', true);
+  if(s==='GP-GC') return coarseSuffix('Poorly graded gravel with clay', true);
+  if(s==='GM'){
+    /* >12% fines, M-type */
+    if(!isNaN(pSand) && pSand >= 15) return 'Silty gravel with sand';
+    return 'Silty gravel';
+  }
+  if(s==='GC'){
+    if(!isNaN(pSand) && pSand >= 15) return 'Clayey gravel with sand';
+    return 'Clayey gravel';
+  }
+  if(s==='GC-GM'){
+    if(!isNaN(pSand) && pSand >= 15) return 'Silty, clayey gravel with sand';
+    return 'Silty, clayey gravel';
+  }
+
+  /* SAND group */
+  if(s==='SW')    return coarseSuffix('Well-graded sand', false);
+  if(s==='SP')    return coarseSuffix('Poorly graded sand', false);
+  if(s==='SW-SM') return coarseSuffix('Well-graded sand with silt', false);
+  if(s==='SW-SC') return coarseSuffix('Well-graded sand with clay', false);
+  if(s==='SP-SM') return coarseSuffix('Poorly graded sand with silt', false);
+  if(s==='SP-SC') return coarseSuffix('Poorly graded sand with clay', false);
+  if(s==='SM'){
+    if(!isNaN(pGravel) && pGravel >= 15) return 'Silty sand with gravel';
+    return 'Silty sand';
+  }
+  if(s==='SC'){
+    if(!isNaN(pGravel) && pGravel >= 15) return 'Clayey sand with gravel';
+    return 'Clayey sand';
+  }
+  if(s==='SC-SM'){
+    if(!isNaN(pGravel) && pGravel >= 15) return 'Silty, clayey sand with gravel';
+    return 'Silty, clayey sand';
+  }
+
+  /* Peat */
+  if(s==='PT') return 'Peat';
+
+  return symbol; /* fallback */
+}
+
 function runClassification(){
   const res=classifySoil();
   const box=document.getElementById('classResultBox');
   const info=document.getElementById('classInputsUsed');
   const isEmpty=res.symbol==='—'||res.symbol==='⚠️';
+
+  /* Get full group name if we have a valid symbol */
+  let groupName = res.name;
+  if(!isEmpty && res.symbol && !res.symbol.includes('*') && !res.symbol.includes('/')){
+    const ll=parseFloat(document.getElementById('ll').value);
+    const pl=parseFloat(document.getElementById('pl').value);
+    const fullName = getUSCSGroupName(res.symbol, getCombinedPassing, ll, pl, NaN);
+    if(fullName && fullName !== res.symbol) groupName = fullName;
+  }
+
   if(isEmpty){
     box.innerHTML=`<div class="class-empty">${res.name||res.symbol}</div><div class="class-detail" style="margin-top:6px">${res.detail}</div>`;
   } else {
     const fs=res.symbol.length>8?'13px':res.symbol.length>5?'16px':'22px';
     const bg=res.symbol==='NP'?'#777':'#5B2D8E';
-    box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${res.name}</div>`;
+    box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${groupName}</div>`;
   }
   if(info) info.textContent=res.detail;
+
+  /* Update OD ratio display */
+  const llODv=parseFloat(document.getElementById('ll_od')?.value);
+  const llNDv=parseFloat(document.getElementById('ll_nd')?.value);
+  const odDisp=document.getElementById('od_ratio_display');
+  if(odDisp){
+    if(!isNaN(llODv)&&!isNaN(llNDv)&&llNDv>0){
+      const r=llODv/llNDv;
+      const organic=r<0.75;
+      odDisp.innerHTML=`النسبة = LL(OD)/LL(ND)<br><span style="font-size:15px;font-weight:900;color:${organic?'#c62828':'#1F6B3A'}">${r.toFixed(2)}</span><br><span style="font-size:10px;color:${organic?'#c62828':'#1F6B3A'}">${organic?'< 0.75 → Organic ✅':'≥ 0.75 → Inorganic'}</span>`;
+    } else {
+      odDisp.innerHTML='النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span>';
+    }
+  }
   /* AASHTO */
   const ll=parseFloat(document.getElementById('ll').value);
   const pl=parseFloat(document.getElementById('pl').value);
@@ -2538,10 +2843,24 @@ function s1_classifySoil(){
     const pi=ll-pl, aLine=0.73*(ll-20);
     const bl=(ll>=12&&ll<=25&&pi>=4&&pi<=7);
     let sym='',nm='';
-    if(bl){sym='CL-ML';nm='CL-ML Borderline';}
-    else if(ll<50){sym=pi>aLine?'CL':'ML';nm=pi>aLine?'CL — Lean Clay':'ML — Silt';}
-    else{sym=pi>aLine?'CH':'MH';nm=pi>aLine?'CH — Fat Clay':'MH — Elastic Silt';}
-    return {symbol:sym,name:nm,detail:`LL=${ll.toFixed(1)}%, PI=${pi.toFixed(1)}% , A-line=${aLine.toFixed(1)}%`};
+
+    /* Organic check */
+    const s1llOD=parseFloat(document.getElementById('s1_ll_od')?.value);
+    const s1llND=parseFloat(document.getElementById('s1_ll_nd')?.value);
+    const s1odRatio=(!isNaN(s1llOD)&&!isNaN(s1llND)&&s1llND>0)?s1llOD/s1llND:NaN;
+    const s1organic=!isNaN(s1odRatio)&&s1odRatio<0.75;
+
+    if(bl){sym='CL-ML';nm='Silty clay (Borderline)';}
+    else if(ll<50){
+      if(s1organic){sym='OL';nm='OL — Organic Clay/Silt (Low Plasticity)';}
+      else{sym=pi>aLine?'CL':'ML';nm=pi>aLine?'CL — Lean Clay':'ML — Silt';}
+    }
+    else{
+      if(s1organic){sym='OH';nm='OH — Organic Clay/Silt (High Plasticity)';}
+      else{sym=pi>aLine?'CH':'MH';nm=pi>aLine?'CH — Fat Clay':'MH — Elastic Silt';}
+    }
+    const s1orgD=!isNaN(s1odRatio)?` — LL(OD)/LL(ND)=${s1odRatio.toFixed(2)}${s1organic?' < 0.75 → Organic':' ≥ 0.75 → Inorganic'}`:'';
+    return {symbol:sym,name:nm,detail:`LL=${ll.toFixed(1)}%, PI=${pi.toFixed(1)}% , A-line=${aLine.toFixed(1)}%${s1orgD}`};
   }
   const fines=p200;
   const gt=(!isNaN(p4)&&(p4-fines)<(50-fines))?'G':'S';
@@ -2582,14 +2901,37 @@ function s1_runClassification(){
   const box=document.getElementById('s1_classResultBox');
   const det=document.getElementById('s1_classDetail');
   const isEmpty=res.symbol==='—'||res.symbol==='⚠️';
+
+  let groupName = res.name;
+  if(!isEmpty && res.symbol && !res.symbol.includes('*') && !res.symbol.includes('/')){
+    const ll=parseFloat(document.getElementById('s1_ll')?.value);
+    const pl=parseFloat(document.getElementById('s1_pl')?.value);
+    const fullName = getUSCSGroupName(res.symbol, s1_getCombinedPassing, ll, pl, NaN);
+    if(fullName && fullName !== res.symbol) groupName = fullName;
+  }
+
   if(isEmpty){
     box.innerHTML=`<div class="class-empty">${res.name||res.symbol}</div>`;
   } else {
     const fs=res.symbol.length>8?'13px':res.symbol.length>5?'16px':'22px';
     const bg=res.symbol==='NP'?'#777':'#5B2D8E';
-    box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${res.name}</div>`;
+    box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${groupName}</div>`;
   }
   if(det) det.textContent=res.detail;
+
+  /* Update OD ratio display */
+  const s1llODv=parseFloat(document.getElementById('s1_ll_od')?.value);
+  const s1llNDv=parseFloat(document.getElementById('s1_ll_nd')?.value);
+  const s1odDisp=document.getElementById('s1_od_ratio_display');
+  if(s1odDisp){
+    if(!isNaN(s1llODv)&&!isNaN(s1llNDv)&&s1llNDv>0){
+      const r=s1llODv/s1llNDv;
+      const org=r<0.75;
+      s1odDisp.innerHTML=`النسبة = LL(OD)/LL(ND)<br><span style="font-size:15px;font-weight:900;color:${org?'#c62828':'#1F6B3A'}">${r.toFixed(2)}</span><br><span style="font-size:10px;color:${org?'#c62828':'#1F6B3A'}">${org?'< 0.75 → Organic ✅':'≥ 0.75 → Inorganic'}</span>`;
+    } else {
+      s1odDisp.innerHTML='النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span>';
+    }
+  }
   /* AASHTO */
   const ll=parseFloat(document.getElementById('s1_ll')?.value);
   const pl=parseFloat(document.getElementById('s1_pl')?.value);
@@ -2988,13 +3330,20 @@ function ss_classify(){
     name=sym+({GC:' — Clayey Gravel',GM:' — Silty Gravel',SC:' — Clayey Sand',SM:' — Silty Sand'}[sym]||'');
   }
 
+  /* Full group name from flowchart */
+  let fullName = name;
+  if(sym !== '—' && !sym.includes('/')  && !sym.includes('*')){
+    const fn2 = getUSCSGroupName(sym, ss_getPass, ll, pl, NaN);
+    if(fn2 && fn2 !== sym) fullName = fn2;
+  }
+
   /* AASHTO */
   const aashto = classifyAASHTO(ss_getPass, ll, pl, false);
   const col    = sym.startsWith('G')?'#1F6B3A':'#1A3A6B';
   box.innerHTML=`
     <div style="margin-bottom:8px">
       <span style="display:inline-block;background:${col};color:#fff;font-size:20px;font-weight:900;padding:6px 20px;border-radius:8px">${sym}</span>
-      <div style="font-size:12px;font-weight:700;color:${col};margin-top:4px">${name}</div>
+      <div style="font-size:12px;font-weight:700;color:${col};margin-top:4px">${fullName}</div>
     </div>
     <div style="background:#fff3e0;border-radius:6px;padding:6px 10px;font-size:12px;color:#8B4500;font-weight:700;margin-bottom:6px">
       AASHTO: ${aashto.symbol} — ${aashto.name} (GI=${aashto.gi})
