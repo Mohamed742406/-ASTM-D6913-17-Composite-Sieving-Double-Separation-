@@ -6,7 +6,63 @@
 <title>ASTM D6913 Double Separation</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f0f2f5;color:#222;font-size:13px}
+body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f0f2f5;color:#222;font-size:13px;transition:background .3s,color .3s}
+
+/* ── Dark Mode ── */
+body.dark-mode{background:#121212;color:#e0e0e0}
+body.dark-mode header{background:linear-gradient(135deg,#1a0a30,#3a1060)}
+body.dark-mode .card{background:#1e1e1e;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+body.dark-mode .card-header.bg-purple{background:#3a1060}
+body.dark-mode .card-header.bg-green{background:#0d3d20}
+body.dark-mode .card-header.bg-blue{background:#0a1e3a}
+body.dark-mode .card-header.bg-orange{background:#4a2000}
+body.dark-mode th{background:#2a1a4a;color:#ccc;border-color:#333}
+body.dark-mode td{border-color:#333;color:#ddd}
+body.dark-mode tr:nth-child(even) td{background:#252525}
+body.dark-mode .tab-nav{background:#1e1e1e}
+body.dark-mode .gtab{background:#2a2a2a;color:#ccc;border-color:#444}
+body.dark-mode .gtab.active{background:#5B2D8E;color:#fff}
+body.dark-mode .seg{background:#252525!important;border-color:#333!important}
+body.dark-mode input[type=number],body.dark-mode input[type=text],body.dark-mode select{background:#2a2a2a!important;color:#e0e0e0!important;border-color:#555!important}
+body.dark-mode .calc-val{background:#1a3a1a!important;border-color:#2d5a2d!important;color:#81c784!important}
+body.dark-mode .param-box{background:#252525!important}
+body.dark-mode .input-yellow{background:#2a2500!important}
+body.dark-mode .input-green{background:#0d2a0d!important}
+body.dark-mode .input-blue{background:#0a1a2a!important}
+body.dark-mode .actions button{filter:brightness(.85)}
+body.dark-mode #status{opacity:.9}
+body.dark-mode .two-col > div{background:#252525!important}
+
+/* ── Floating Scroll-to-Top ── */
+#btn-top{
+  position:fixed;bottom:28px;left:24px;
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,#1A3A6B,#2E5FA3);
+  color:#fff;font-size:20px;font-weight:700;
+  border:none;cursor:pointer;
+  box-shadow:0 4px 16px rgba(26,58,107,.4);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s,transform .2s,box-shadow .2s;
+  z-index:9990
+}
+#btn-top.visible{opacity:1;pointer-events:auto}
+#btn-top:hover{transform:translateY(-3px);box-shadow:0 7px 22px rgba(26,58,107,.5)}
+#btn-top:active{transform:scale(.94)}
+body.dark-mode #btn-top{background:linear-gradient(135deg,#0a1e3a,#1A3A6B)}
+
+/* ── Lock overlay ── */
+#lock-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.0);z-index:8888;cursor:not-allowed
+}
+#lock-banner{
+  display:none;position:fixed;top:0;left:0;right:0;
+  background:linear-gradient(90deg,#c62828,#b71c1c);color:#fff;
+  text-align:center;font-size:13px;font-weight:700;padding:8px;
+  z-index:9000;letter-spacing:.3px
+}
+body.dark-mode #lock-banner{background:linear-gradient(90deg,#7f0000,#b71c1c)}
 header{background:linear-gradient(135deg,#4a1a8a,#7b3db5);color:#fff;padding:14px 20px;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,.28)}
 header h1{font-size:15px;font-weight:700}header p{font-size:11px;opacity:.9;margin-top:4px}
 .container{max-width:1200px;margin:16px auto;padding:0 12px}
@@ -102,16 +158,58 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
 }
 </style>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+
+<!-- Lock Banner -->
+<div id="lock-banner">🔒 النتائج مقفولة — النتائج محمية، افتح القفل لإجراء تغييرات / Results are locked. Unlock to make changes.</div>
+<!-- Lock Overlay -->
+<div id="lock-overlay"></div>
+
+<!-- Floating Scroll-to-Top -->
+<button id="btn-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="للأعلى / Back to Top">⬆</button>
+
 <header>
-  <h1>🔬 ASTM D6913 &nbsp;|&nbsp; Soil Particle-Size Distribution — Sieve Analysis Calculator</h1>
-  <p>حاسبة تحليل المنخل وتوزيع حجم الجسيمات — نخل مركب (فصل واحد وفصلين) ونخل مفرد</p>
-  <button class="guide-btn" onclick="document.getElementById('guideModal').style.display='flex'">📖 دليل الاستخدام والحسابات</button>
-  <div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 20px;backdrop-filter:blur(4px)">
-    <div style="font-size:11px;opacity:.75;letter-spacing:.3px;margin-bottom:2px">تم إعداد وتطوير المنصة</div>
-    <div style="font-size:15px;font-weight:900;letter-spacing:.5px">م/ محمد أحمد القصبى</div>
-    <div style="font-size:10px;opacity:.78;letter-spacing:.5px;margin-top:2px">Developed by: Eng. Mohamed Ahmed Elkasaby</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+
+    <!-- Left: title -->
+    <div style="flex:1;min-width:200px;text-align:center">
+      <h1>🔬 ASTM D6913 &nbsp;|&nbsp; Soil Particle-Size Distribution — Sieve Analysis Calculator</h1>
+      <p style="margin-top:4px">حاسبة تحليل المنخل وتوزيع حجم الجسيمات — نخل مركب (فصل واحد وفصلين) ونخل مفرد</p>
+    </div>
+
+    <!-- Right: controls -->
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+
+      <!-- Header buttons row -->
+      <div style="display:flex;gap:8px;align-items:center">
+        <!-- Dark Mode -->
+        <button id="btn-dark" onclick="toggleDarkMode()" title="وضع ليلي" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:background .2s;backdrop-filter:blur(4px)">
+          <span id="dark-icon">🌙</span><span id="dark-label">وضع ليلي</span>
+        </button>
+        <!-- Lock Results -->
+        <button id="btn-lock" onclick="toggleLock()" title="قفل النتائج" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:background .2s;backdrop-filter:blur(4px)">
+          <span id="lock-icon">🔒</span><span id="lock-label">قفل النتائج</span>
+        </button>
+        <!-- Export Excel -->
+        <button onclick="exportToExcel()" title="تصدير Excel" style="background:rgba(34,139,34,.6);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;backdrop-filter:blur(4px)">
+          📊 تصدير Excel
+        </button>
+      </div>
+
+      <!-- Developer credit -->
+      <div style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);border-radius:16px;padding:5px 16px;backdrop-filter:blur(4px);text-align:center">
+        <div style="font-size:10px;opacity:.75;letter-spacing:.3px">تم إعداد وتطوير المنصة</div>
+        <div style="font-size:13px;font-weight:900;letter-spacing:.5px">م/ محمد أحمد القصبى</div>
+        <div style="font-size:9px;opacity:.78;letter-spacing:.4px">Eng. Mohamed Ahmed Elkasaby</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:8px">
+    <button class="guide-btn" onclick="document.getElementById('guideModal').style.display='flex'">📖 دليل الاستخدام والحسابات</button>
   </div>
 </header>
 
@@ -355,24 +453,28 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
             <div>
               <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Liquid Limit, LL (%)</label>
-              <input type="number" id="ll" value="" oninput="runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px">
+              <input type="number" id="ll" value="" oninput="runClassification();_updatePI('ll','pl','pi_display')" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px">
             </div>
             <div>
               <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Plastic Limit, PL (%)</label>
-              <input type="number" id="pl" value="" oninput="runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px">
+              <input type="number" id="pl" value="" oninput="runClassification();_updatePI('ll','pl','pi_display')" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px">
             </div>
             <div>
-              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Plasticity / اللدونة</label>
-              <select id="plasticityFlag" onchange="runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px;background:#fff">
-                <option value="auto">تلقائي (Auto)</option>
-                <option value="yes">نعم — Plastic</option>
-                <option value="no">لا — Non Plastic (NP)</option>
-              </select>
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">مؤشر اللدونة / Plasticity Index PI (%)</label>
+              <div id="pi_display" style="padding:7px;border:1.5px solid #1F6B3A;border-radius:4px;background:#e8f5e9;font-weight:900;font-size:15px;color:#1F6B3A;text-align:center;min-height:35px">—</div>
             </div>
+          </div>
+          <div style="margin-top:8px">
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Plasticity / اللدونة</label>
+            <select id="plasticityFlag" onchange="runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px;background:#fff">
+              <option value="auto">تلقائي (Auto)</option>
+              <option value="yes">نعم — Plastic</option>
+              <option value="no">لا — Non Plastic (NP)</option>
+            </select>
           </div>
           <!-- Organic detection row -->
           <div style="margin-top:10px;background:#fff9c4;border-radius:6px;padding:8px 12px">
-            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH) — اختياري / Organic Check</div>
+            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH/PT) — اختياري / Organic Check</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
               <div>
                 <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Oven-Dried) %</label>
@@ -385,6 +487,13 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
               <div style="display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;padding:8px;border:1px solid #f9a825">
                 <div id="od_ratio_display" style="text-align:center;font-size:11px;color:#555">النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span></div>
               </div>
+            </div>
+            <!-- Peat detection -->
+            <div style="margin-top:8px;background:#3E2723;color:#fff;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:12px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:700">
+                <input type="checkbox" id="isPeat" onchange="runClassification()" style="width:16px;height:16px;accent-color:#8B4500">
+                🌿 Peat (PT) — المادة عضوية بالكامل (لون داكن + رائحة عضوية + مادة عضوية سائدة)
+              </label>
             </div>
           </div>
         </div>
@@ -635,19 +744,16 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
           <b style="color:#1A3A6B">حدّات أتربرج / Atterberg Limits</b>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
             <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Liquid Limit, LL (%)</label>
-              <input type="number" id="s1_ll" value="" oninput="s1_runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px"></div>
+              <input type="number" id="s1_ll" value="" oninput="s1_runClassification();_updatePI('s1_ll','s1_pl','s1_pi_display')" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px"></div>
             <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Plastic Limit, PL (%)</label>
-              <input type="number" id="s1_pl" value="" oninput="s1_runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px"></div>
-            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">Plasticity</label>
-              <select id="s1_plasticityFlag" onchange="s1_runClassification()" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px;background:#fff">
-                <option value="auto">تلقائي (Auto)</option>
-                <option value="no">Non Plastic (NP)</option>
-              </select>
+              <input type="number" id="s1_pl" value="" oninput="s1_runClassification();_updatePI('s1_ll','s1_pl','s1_pi_display')" style="width:100%;padding:7px;border:1.5px solid #bbb;border-radius:4px"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">مؤشر اللدونة / PI (%)</label>
+              <div id="s1_pi_display" style="padding:7px;border:1.5px solid #1F6B3A;border-radius:4px;background:#e8f5e9;font-weight:900;font-size:15px;color:#1F6B3A;text-align:center;min-height:35px">—</div>
             </div>
           </div>
           <!-- Organic detection row -->
           <div style="margin-top:10px;background:#fff9c4;border-radius:6px;padding:8px 12px">
-            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH) — اختياري</div>
+            <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH/PT) — اختياري</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
               <div>
                 <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Oven-Dried) %</label>
@@ -660,6 +766,13 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
               <div style="display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;padding:6px;border:1px solid #f9a825">
                 <div id="s1_od_ratio_display" style="text-align:center;font-size:11px;color:#555">النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span></div>
               </div>
+            </div>
+            <!-- Peat detection -->
+            <div style="margin-top:8px;background:#3E2723;color:#fff;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:12px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:700">
+                <input type="checkbox" id="s1_isPeat" onchange="s1_runClassification()" style="width:16px;height:16px;accent-color:#8B4500">
+                🌿 Peat (PT) — المادة عضوية بالكامل (لون داكن + رائحة عضوية + مادة عضوية سائدة)
+              </label>
             </div>
           </div>
         </div>
@@ -739,17 +852,17 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
     </div>
 
     <!-- ═══ A4 REPORT ═══ -->
-    <div id="a4Report" style="background:#fff;border:1px solid #bbb;border-radius:6px;padding:10mm 10mm 8mm 10mm;max-width:794px;margin:0 auto 20px auto;box-shadow:0 4px 16px rgba(0,0,0,.12);font-family:Segoe UI,Tahoma,Arial,sans-serif;font-size:8pt;color:#111;line-height:1.35">
+    <div id="a4Report" style="background:#fff;border:1px solid #bbb;border-radius:6px;padding:6mm 8mm 5mm 8mm;max-width:794px;margin:0 auto 20px auto;box-shadow:0 4px 16px rgba(0,0,0,.12);font-family:Segoe UI,Tahoma,Arial,sans-serif;font-size:8pt;color:#111;line-height:1.3">
 
       <!-- ── REPORT HEADER ── -->
-      <table style="width:100%;border-collapse:collapse;margin-bottom:3mm">
+      <table style="width:100%;border-collapse:collapse;margin-bottom:2mm">
         <tr>
           <td style="width:30%;font-size:8pt;color:#444;vertical-align:top">
             <div style="font-weight:700;font-size:9pt;color:#1a1a1a">MATERIALS AND DESIGN</div>
             <div style="font-size:7pt;color:#777"></div>
           </td>
           <td style="text-align:center;vertical-align:middle">
-            <div style="font-size:13pt;font-weight:900;color:#4a1a8a;letter-spacing:.5px">SOIL GRADATION REPORT</div>
+            <div style="font-size:11pt;font-weight:900;color:#4a1a8a;letter-spacing:.5px">SOIL GRADATION REPORT</div>
             <div id="rpt_header_subtitle" style="font-size:8pt;font-weight:700;color:#333;margin-top:1mm">ASTM D6913-17 — Composite Sieving / Double Separation</div>
             <div style="font-size:7pt;color:#666;margin-top:0.5mm"></div>
           </td>
@@ -759,11 +872,11 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
           </td>
         </tr>
       </table>
-      <div style="border-top:2.5px solid #4a1a8a;border-bottom:1px solid #c0a0e0;padding:1mm 0;margin-bottom:3mm"></div>
+      <div style="border-top:2.5px solid #4a1a8a;border-bottom:1px solid #c0a0e0;padding:0.5mm 0;margin-bottom:1.5mm"></div>
 
       <!-- ── PROJECT INFORMATION ── -->
-      <div style="background:#4a1a8a;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1.5mm;letter-spacing:.5px">PROJECT INFORMATION</div>
-      <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:3mm">
+      <div style="background:#4a1a8a;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:1mm;letter-spacing:.5px">PROJECT INFORMATION</div>
+      <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:1.5mm">
         <tr>
           <td style="width:16%;font-weight:700;color:#4a1a8a;padding:1mm 1.5mm;border:0.5px solid #ccc;background:#f5f0ff">Client</td>
           <td style="width:34%;padding:1mm 1.5mm;border:0.5px solid #ccc" id="rpt_clientName">—</td>
@@ -797,8 +910,8 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
       </table>
 
       <!-- ── TEST PROCEDURE DETAILS ── -->
-      <div style="background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1.5mm;letter-spacing:.5px">TEST PROCEDURE DETAILS</div>
-      <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:3mm">
+      <div style="background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:1mm;letter-spacing:.5px">TEST PROCEDURE DETAILS</div>
+      <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:1.5mm">
         <tr>
           <td style="width:12%;font-weight:700;color:#1F6B3A;padding:1mm 1.5mm;border:0.5px solid #ccc;background:#f0faf4">Method</td>
           <td style="width:28%;padding:1mm 1.5mm;border:0.5px solid #ccc" id="rpt_method">ASTM D6913-17</td>
@@ -827,11 +940,11 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
       </table>
 
       <!-- ── TWO-COLUMN LAYOUT: TABLE LEFT, CHART RIGHT ── -->
-      <div style="display:flex;gap:3mm;margin-bottom:3mm;align-items:flex-start">
+      <div style="display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start">
 
         <!-- Sieve Analysis Table -->
         <div style="flex:1;min-width:0">
-          <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">SIEVE ANALYSIS DATA TABLE</div>
+          <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:0.5mm;letter-spacing:.5px">SIEVE ANALYSIS DATA TABLE</div>
           <table id="rpt_sieveTable" style="width:100%;border-collapse:collapse;font-size:7pt">
             <thead>
               <tr style="background:#d0dff0">
@@ -847,7 +960,7 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
           </table>
 
           <!-- Classification & Coefficients below table -->
-          <div style="margin-top:2mm;background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">CLASSIFICATION & SUMMARY</div>
+          <div style="margin-top:1mm;background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:0.5mm;letter-spacing:.5px">CLASSIFICATION & SUMMARY</div>
           <table style="width:100%;border-collapse:collapse;font-size:7pt">
             <tbody id="rpt_classBody">
               <tr><td colspan="4" style="text-align:center;color:#aaa;padding:3mm;font-size:7pt">Run calculation first</td></tr>
@@ -857,15 +970,15 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
 
         <!-- Gradation Chart -->
         <div style="flex:1.3;min-width:0">
-          <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">GRAIN SIZE DISTRIBUTION CURVE</div>
-          <div style="border:0.5px solid #ccc;border-radius:3px;overflow:hidden;background:#fafafa;min-height:115mm;">
-            <div id="reportChartDiv" style="width:100%;height:115mm;"></div>
+          <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:0.5mm;letter-spacing:.5px">GRAIN SIZE DISTRIBUTION CURVE</div>
+          <div style="border:0.5px solid #ccc;border-radius:3px;overflow:hidden;background:#fafafa;min-height:88mm;">
+            <div id="reportChartDiv" style="width:100%;height:88mm;"></div>
           </div>
         </div>
       </div>
 
       <!-- ── AUTHORIZATION FOOTER ── -->
-      <div style="border-top:1.5px solid #4a1a8a;margin-top:2mm;padding-top:2mm">
+      <div style="border-top:1.5px solid #4a1a8a;margin-top:1mm;padding-top:1.5mm">
         <div style="background:#333;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:2mm;letter-spacing:.5px;display:inline-block">AUTHORIZATION FOOTER</div>
         <table style="width:100%;border-collapse:collapse;font-size:7.5pt">
           <tr>
@@ -889,7 +1002,7 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
             </td>
           </tr>
         </table>
-        <div style="margin-top:2mm;font-size:6.5pt;color:#aaa;text-align:center">
+        <div style="margin-top:1mm;font-size:6pt;color:#aaa;text-align:center">
           Report generated by ASTM D6913-17 Double Separation Calculator — Platform: mohamed742406.github.io
         </div>
       </div>
@@ -922,11 +1035,38 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
           </div>
           <div class="param-box input-blue">
             <label>LL (%)</label>
-            <input type="number" id="ss_ll" step="0.1" onchange="ss_classify()" placeholder="—">
+            <input type="number" id="ss_ll" step="0.1" onchange="ss_classify();_updatePI('ss_ll','ss_pl','ss_pi_display')" placeholder="—">
           </div>
           <div class="param-box input-blue">
             <label>PL (%)</label>
-            <input type="number" id="ss_pl" step="0.1" onchange="ss_classify()" placeholder="—">
+            <input type="number" id="ss_pl" step="0.1" onchange="ss_classify();_updatePI('ss_ll','ss_pl','ss_pi_display')" placeholder="—">
+          </div>
+          <div class="param-box input-green">
+            <label>PI (%) — تلقائي</label>
+            <div id="ss_pi_display" style="padding:6px;border:1.5px solid #1F6B3A;border-radius:4px;background:#e8f5e9;font-weight:900;font-size:15px;color:#1F6B3A;text-align:center;min-height:34px">—</div>
+          </div>
+        </div>
+        <!-- Organic / Peat section -->
+        <div style="margin-top:10px;background:#fff9c4;border-radius:6px;padding:8px 12px">
+          <div style="font-size:11px;font-weight:700;color:#8B4500;margin-bottom:6px">🧪 فحص العضوية (OL/OH/PT) — اختياري</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div>
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Oven-Dried) %</label>
+              <input type="number" id="ss_ll_od" value="" oninput="ss_classify()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7" placeholder="LL بعد التجفيف">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">LL (Not Dried) %</label>
+              <input type="number" id="ss_ll_nd" value="" oninput="ss_classify()" style="width:100%;padding:7px;border:1.5px solid #f9a825;border-radius:4px;background:#fffde7" placeholder="LL بدون تجفيف">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;padding:6px;border:1px solid #f9a825">
+              <div id="ss_od_ratio_display" style="text-align:center;font-size:11px;color:#555">النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span></div>
+            </div>
+          </div>
+          <div style="margin-top:8px;background:#3E2723;color:#fff;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:700">
+              <input type="checkbox" id="ss_isPeat" onchange="ss_classify()" style="width:16px;height:16px;accent-color:#8B4500">
+              🌿 Peat (PT) — المادة عضوية بالكامل (لون داكن + رائحة عضوية + مادة عضوية سائدة)
+            </label>
           </div>
         </div>
       </div>
@@ -1526,6 +1666,11 @@ function classifySoil(){
   const pl=parseFloat(document.getElementById('pl').value);
   const pf=document.getElementById('plasticityFlag').value||'auto';
 
+  /* ── Peat (PT) check — overrides everything ── */
+  if(document.getElementById('isPeat')?.checked){
+    return {symbol:'PT',name:'PT — Peat',detail:'Highly organic soil — primarily organic matter, dark in color, organic odor (ASTM D2487).'};
+  }
+
   const p200=getCombinedPassing(0.075);
   const p4  =getCombinedPassing(4.75);
 
@@ -1870,15 +2015,19 @@ function runClassification(){
   if(!isEmpty && res.symbol && !res.symbol.includes('*') && !res.symbol.includes('/')){
     const ll=parseFloat(document.getElementById('ll').value);
     const pl=parseFloat(document.getElementById('pl').value);
-    const fullName = getUSCSGroupName(res.symbol, getCombinedPassing, ll, pl, NaN);
-    if(fullName && fullName !== res.symbol) groupName = fullName;
+    if(res.symbol === 'PT'){
+      groupName = 'Peat — مادة عضوية عالية';
+    } else {
+      const fullName = getUSCSGroupName(res.symbol, getCombinedPassing, ll, pl, NaN);
+      if(fullName && fullName !== res.symbol) groupName = fullName;
+    }
   }
 
   if(isEmpty){
     box.innerHTML=`<div class="class-empty">${res.name||res.symbol}</div><div class="class-detail" style="margin-top:6px">${res.detail}</div>`;
   } else {
     const fs=res.symbol.length>8?'13px':res.symbol.length>5?'16px':'22px';
-    const bg=res.symbol==='NP'?'#777':'#5B2D8E';
+    const bg=res.symbol==='NP'?'#777':res.symbol==='PT'?'#3E2723':'#5B2D8E';
     box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${groupName}</div>`;
   }
   if(info) info.textContent=res.detail;
@@ -2506,19 +2655,27 @@ function printReport(){
       +'<style>'
       +'@page{size:A4 portrait;margin:5mm 6mm 5mm 6mm}'
       +'*{box-sizing:border-box;margin:0;padding:0}'
-      +'body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#fff;color:#111}'
-      +'#a4Report{width:199mm;font-size:7.5pt;padding:0;transform-origin:top right}'
+      +'body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#fff;color:#111;overflow:hidden}'
+      +'#a4Report{width:199mm;font-size:7.5pt;padding:0;}'
       +'table{width:100%;border-collapse:collapse}'
-      +'th,td{border:0.4px solid #ccc;padding:0.7mm 1.2mm;font-size:6.8pt}'
+      +'th,td{border:0.4px solid #ccc;padding:0.6mm 1mm;font-size:6.8pt}'
       +'img{max-width:100%;height:auto;display:block}'
       +'-webkit-print-color-adjust:exact;print-color-adjust:exact;'
       +'</style>'
       +'<script>window.onload=function(){'
       +'var rpt=document.getElementById("a4Report");'
-      +'if(rpt){var pageH=277;var actualH=rpt.getBoundingClientRect().height*0.2646;'
-      +'if(actualH>pageH){var sc=pageH/actualH;rpt.style.transform="scale("+sc+")";'
-      +'rpt.style.transformOrigin="top right";document.body.style.height=(actualH*sc)+"mm";}}'
-      +'setTimeout(function(){window.print();},700);'
+      +'if(rpt){'
+      +'var pageH=275;'
+      +'var actualH=rpt.getBoundingClientRect().height*0.2646;'
+      +'if(actualH>pageH){'
+      +'var sc=(pageH/actualH);'
+      +'rpt.style.transformOrigin="top center";'
+      +'rpt.style.transform="scale("+sc+")";'
+      +'document.body.style.height=Math.ceil(actualH*sc+2)+"mm";'
+      +'document.body.style.overflow="hidden";'
+      +'}'
+      +'}'
+      +'setTimeout(function(){window.print();},900);'
       +'};<\/script>'
       +'</head><body>'+clone.outerHTML+'</body></html>');
     w.document.close();
@@ -2827,6 +2984,12 @@ function s1_classifySoil(){
   const ll=parseFloat(document.getElementById('s1_ll')?.value);
   const pl=parseFloat(document.getElementById('s1_pl')?.value);
   const pf=document.getElementById('s1_plasticityFlag')?.value||'auto';
+
+  /* ── Peat (PT) check ── */
+  if(document.getElementById('s1_isPeat')?.checked){
+    return {symbol:'PT',name:'PT — Peat',detail:'Highly organic soil — primarily organic matter, dark in color, organic odor (ASTM D2487).'};
+  }
+
   const p200=s1_getCombinedPassing(0.075);
   const p4  =s1_getCombinedPassing(4.75);
   if(isNaN(p200)) return {symbol:'—',name:'',detail:'Run calculation first.'};
@@ -2906,15 +3069,19 @@ function s1_runClassification(){
   if(!isEmpty && res.symbol && !res.symbol.includes('*') && !res.symbol.includes('/')){
     const ll=parseFloat(document.getElementById('s1_ll')?.value);
     const pl=parseFloat(document.getElementById('s1_pl')?.value);
-    const fullName = getUSCSGroupName(res.symbol, s1_getCombinedPassing, ll, pl, NaN);
-    if(fullName && fullName !== res.symbol) groupName = fullName;
+    if(res.symbol === 'PT'){
+      groupName = 'Peat — مادة عضوية عالية';
+    } else {
+      const fullName = getUSCSGroupName(res.symbol, s1_getCombinedPassing, ll, pl, NaN);
+      if(fullName && fullName !== res.symbol) groupName = fullName;
+    }
   }
 
   if(isEmpty){
     box.innerHTML=`<div class="class-empty">${res.name||res.symbol}</div>`;
   } else {
     const fs=res.symbol.length>8?'13px':res.symbol.length>5?'16px':'22px';
-    const bg=res.symbol==='NP'?'#777':'#5B2D8E';
+    const bg=res.symbol==='NP'?'#777':res.symbol==='PT'?'#3E2723':'#5B2D8E';
     box.innerHTML=`<div class="class-badge" style="background:${bg};font-size:${fs}">${res.symbol}</div><div class="class-name" style="margin-top:8px">${groupName}</div>`;
   }
   if(det) det.textContent=res.detail;
@@ -3301,6 +3468,32 @@ function ss_classify(){
   const box = document.getElementById('ss_classBox');
   if(!box||isNaN(p0075)){return;}
 
+  /* OD ratio display */
+  const ssllODv=parseFloat(document.getElementById('ss_ll_od')?.value);
+  const ssllNDv=parseFloat(document.getElementById('ss_ll_nd')?.value);
+  const ssOdDisp=document.getElementById('ss_od_ratio_display');
+  if(ssOdDisp){
+    if(!isNaN(ssllODv)&&!isNaN(ssllNDv)&&ssllNDv>0){
+      const r=ssllODv/ssllNDv; const org=r<0.75;
+      ssOdDisp.innerHTML=`النسبة = LL(OD)/LL(ND)<br><span style="font-size:15px;font-weight:900;color:${org?'#c62828':'#1F6B3A'}">${r.toFixed(2)}</span><br><span style="font-size:10px;color:${org?'#c62828':'#1F6B3A'}">${org?'< 0.75 → Organic ✅':'≥ 0.75 → Inorganic'}</span>`;
+    } else {
+      ssOdDisp.innerHTML='النسبة = LL(OD)/LL(ND)<br><span style="font-size:13px;font-weight:700;color:#8B4500">—</span><br><span style="font-size:10px">< 0.75 → Organic</span>';
+    }
+  }
+
+  /* ── Peat (PT) check ── */
+  if(document.getElementById('ss_isPeat')?.checked){
+    box.innerHTML=`
+      <div style="margin-bottom:8px">
+        <span style="display:inline-block;background:#3E2723;color:#fff;font-size:20px;font-weight:900;padding:6px 20px;border-radius:8px">PT</span>
+        <div style="font-size:12px;font-weight:700;color:#3E2723;margin-top:4px">Peat — مادة عضوية عالية</div>
+      </div>
+      <div style="background:#efebe9;border-radius:6px;padding:6px 10px;font-size:11px;color:#3E2723">
+        Highly organic soil — primarily organic matter, dark in color, organic odor (ASTM D2487 — Highly Organic Soils)
+      </div>`;
+    return;
+  }
+
   const isGravel = !isNaN(p475) && p475<50;
   const cuOkG = !isNaN(ssCu)&&ssCu>=4&&!isNaN(ssCc)&&ssCc>=1&&ssCc<=3;
   const cuOkS = !isNaN(ssCu)&&ssCu>=6&&!isNaN(ssCc)&&ssCc>=1&&ssCc<=3;
@@ -3527,7 +3720,7 @@ function ss_delSieve(){
   ss_calculate();
 }
 function ss_reset(){
-  ['ss_total','ss_washed','ss_ll','ss_pl'].forEach(id=>{
+  ['ss_total','ss_washed','ss_ll','ss_pl','ss_ll_od','ss_ll_nd'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   SS_SIEVES.forEach(s=>{
@@ -3598,7 +3791,7 @@ window.onload=()=>{
     </div>
     <div class="modal-body" style="padding:0;max-height:90vh;overflow-y:auto">
       <!-- A4 Preview -->
-      <div id="irm_a4" style="background:#fff;padding:10mm 10mm 8mm 10mm;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-size:8pt;color:#111;line-height:1.35;min-height:200px">
+      <div id="irm_a4" style="background:#fff;padding:6mm 8mm 5mm 8mm;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-size:8pt;color:#111;line-height:1.3;min-height:200px">
         <!-- dynamically built -->
       </div>
     </div>
@@ -3674,6 +3867,26 @@ function _getProjectInfo(){
     tech      : document.getElementById('technicianName')?.value|| '—',
     env       : document.getElementById('envConditions')?.value || '—',
     method    : document.getElementById('methodUsed')?.value    || 'ASTM D6913-17',
+  };
+}
+
+/* ── _getAtterberg: read LL/PL/PI/OD ratio from correct tab ── */
+function _getAtterberg(mode){
+  let llId,plId,llOdId,llNdId;
+  if(mode==='double'){ llId='ll'; plId='pl'; llOdId='ll_od'; llNdId='ll_nd'; }
+  else if(mode==='single'){ llId='s1_ll'; plId='s1_pl'; llOdId='s1_ll_od'; llNdId='s1_ll_nd'; }
+  else { llId='ss_ll'; plId='ss_pl'; llOdId='ss_ll_od'; llNdId='ss_ll_nd'; }
+  const ll=parseFloat(document.getElementById(llId)?.value);
+  const pl=parseFloat(document.getElementById(plId)?.value);
+  const llOD=parseFloat(document.getElementById(llOdId)?.value);
+  const llND=parseFloat(document.getElementById(llNdId)?.value);
+  const pi=(!isNaN(ll)&&!isNaN(pl)&&pl<ll)?(ll-pl):NaN;
+  const odRatio=(!isNaN(llOD)&&!isNaN(llND)&&llND>0)?(llOD/llND):NaN;
+  return {
+    ll : !isNaN(ll) ? ll.toFixed(1) : '—',
+    pl : !isNaN(pl) ? pl.toFixed(1) : '—',
+    pi : !isNaN(pi) ? pi.toFixed(1) : (!isNaN(ll)&&isNaN(pl)?'NP':'—'),
+    odRatio: !isNaN(odRatio) ? odRatio.toFixed(2) : '—'
   };
 }
 
@@ -3767,14 +3980,14 @@ function _buildA4HTML(mode){
   if(mode==='double'){
     const box=document.getElementById('classResultBox');
     const ab=document.getElementById('aashtoResultBox');
-    classHTML=_extractClassHTML(box,ab);
+    classHTML=_extractClassHTML(box,ab,'double');
   } else if(mode==='single'){
     const box=document.getElementById('s1_classResultBox');
     const ab=document.getElementById('s1_aashtoResultBox');
-    classHTML=_extractClassHTML(box,ab);
+    classHTML=_extractClassHTML(box,ab,'single');
   } else {
     const box=document.getElementById('ss_classBox');
-    classHTML=box?box.innerHTML:'—';
+    classHTML=_extractClassHTML_simple(box);
   }
 
   /* ── D values ── */
@@ -3809,11 +4022,31 @@ function _buildA4HTML(mode){
   /* ── Show Sep.2 row only for double ── */
   const sep2RowStyle = mode==='double' ? '' : 'display:none';
 
+  /* ── Atterberg Limits ── */
+  const _att = _getAtterberg(mode);
+  const attHTML = _att.ll!=='—' ? (()=>{
+    const odRow = _att.odRatio!=='—'
+      ? `<tr style="background:#fff9c4"><td colspan="3" style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr;color:#8B4500;font-size:6.5pt">LL(Oven-Dried)/LL(Not-Dried) = <b>${_att.odRatio}</b> ${parseFloat(_att.odRatio)<0.75?'&#8594; Organic Soil':'&#8594; Inorganic Soil'}</td></tr>`
+      : '';
+    return `<div style="margin-top:0.8mm;background:#8B4500;color:#fff;font-size:7pt;font-weight:700;padding:0.8mm 2mm;margin-bottom:0.3mm;letter-spacing:.3px">&#9646; ATTERBERG LIMITS &nbsp;<span style="font-weight:400;font-size:6.5pt;opacity:.85">(ASTM D4318)</span></div>
+    <table style="width:100%;border-collapse:collapse;font-size:7pt;margin-bottom:2mm"><thead><tr style="background:#fff3e0">
+      <th style="font-weight:700;color:#8B4500;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#fff3e0;text-align:center;direction:ltr;width:33%">Liquid Limit — LL (%)</th>
+      <th style="font-weight:700;color:#8B4500;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#fff3e0;text-align:center;direction:ltr;width:33%">Plastic Limit — PL (%)</th>
+      <th style="font-weight:700;color:#8B4500;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#fff3e0;text-align:center;direction:ltr;width:34%">Plasticity Index — PI (%)</th>
+    </tr></thead><tbody>
+      <tr style="background:#fffde7">
+        <td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;font-weight:900;font-size:9pt;color:#8B4500">${_att.ll}</td>
+        <td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;font-weight:900;font-size:9pt;color:#5B2D8E">${_att.pl}</td>
+        <td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;font-weight:900;font-size:9pt;color:#1F6B3A">${_att.pi}</td>
+      </tr>${odRow}
+    </tbody></table>`;
+  })() : '';
+
   return `
   <div style="direction:ltr;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:#111">
 
   <!-- ══ HEADER ══ -->
-  <table style="width:100%;border-collapse:collapse;margin-bottom:3mm">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:1.5mm">
     <tr>
       <td style="width:28%;vertical-align:middle">
         <div style="font-weight:900;font-size:10pt;color:#1A3A6B;letter-spacing:.5px">MATERIALS TESTING</div>
@@ -3829,11 +4062,11 @@ function _buildA4HTML(mode){
       </td>
     </tr>
   </table>
-  <div style="border-top:3px solid #1A3A6B;border-bottom:1px solid #a0c0e0;margin-bottom:4mm"></div>
+  <div style="border-top:2px solid #1A3A6B;border-bottom:1px solid #a0c0e0;margin-bottom:2mm"></div>
 
   <!-- ══ PROJECT INFORMATION ══ -->
-  <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1.5mm;letter-spacing:.8px">▌ PROJECT INFORMATION</div>
-  <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:3.5mm">
+  <div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1mm 3mm;margin-bottom:1mm;letter-spacing:.5px">&#9646; PROJECT INFORMATION</div>
+  <table style="width:100%;border-collapse:collapse;font-size:7pt;margin-bottom:2mm">
     <tr>
       <td style="${_thSt('1A3A6B')};width:14%">Client</td>
       <td style="${_tdSt()};width:36%">${p.client}</td>
@@ -3861,8 +4094,8 @@ function _buildA4HTML(mode){
   </table>
 
   <!-- ══ TEST PROCEDURE DETAILS ══ -->
-  <div style="background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1.5mm;letter-spacing:.8px">▌ TEST PROCEDURE DETAILS</div>
-  <table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:3.5mm">
+  <div style="background:#1F6B3A;color:#fff;font-size:7pt;font-weight:700;padding:1mm 3mm;margin-bottom:1mm;letter-spacing:.5px">&#9646; TEST PROCEDURE DETAILS</div>
+  <table style="width:100%;border-collapse:collapse;font-size:7pt;margin-bottom:2mm">
     <tr>
       <td style="${_thSt('1F6B3A')};width:14%">Standard</td>
       <td style="${_tdSt()};width:36%">${p.method}</td>
@@ -3890,13 +4123,13 @@ function _buildA4HTML(mode){
   </table>
 
   <!-- ══ TWO-COLUMN: DATA TABLE + CHART ══ -->
-  <div style="display:flex;gap:4mm;margin-bottom:3.5mm;align-items:flex-start">
+  <div style="display:flex;gap:3mm;margin-bottom:2mm;align-items:flex-start">
 
     <!-- LEFT: sieve table + D-values + classification -->
     <div style="flex:1;min-width:0">
 
       <!-- Sieve Table -->
-      <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">▌ SIEVE ANALYSIS DATA TABLE</div>
+      <div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1mm 2mm;margin-bottom:0.5mm;letter-spacing:.3px">&#9646; SIEVE ANALYSIS DATA TABLE</div>
       <table style="width:100%;border-collapse:collapse;font-size:7pt">
         <thead>
           <tr style="background:#d0dff0">
@@ -3910,59 +4143,62 @@ function _buildA4HTML(mode){
       </table>
 
       <!-- Gradation Coefficients -->
-      <div style="margin-top:3mm;background:#1F6B3A;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">▌ GRADATION COEFFICIENTS</div>
+      <div style="margin-top:1mm;background:#1F6B3A;color:#fff;font-size:7pt;font-weight:700;padding:1mm 2mm;margin-bottom:0.5mm;letter-spacing:.3px">&#9646; GRADATION COEFFICIENTS</div>
       <table style="width:100%;border-collapse:collapse;font-size:7pt">
         <tbody>${dHTML}</tbody>
       </table>
 
       <!-- Particle Size Fractions -->
-      <div style="margin-top:2mm;background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">▌ PARTICLE SIZE FRACTIONS</div>
+      <div style="margin-top:0.8mm;background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1mm 2mm;margin-bottom:0.5mm;letter-spacing:.3px">&#9646; PARTICLE SIZE FRACTIONS</div>
       <table style="width:100%;border-collapse:collapse;font-size:7pt">
         <tbody>${fractHTML}</tbody>
       </table>
 
+      <!-- Atterberg Limits -->
+      ${attHTML}
+
       <!-- Soil Classification -->
-      <div style="margin-top:3mm;background:#5B2D8E;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">▌ SOIL CLASSIFICATION</div>
+      <div style="margin-top:0.8mm;background:#5B2D8E;color:#fff;font-size:7pt;font-weight:700;padding:1mm 2mm;margin-bottom:0.5mm;letter-spacing:.3px">&#9646; SOIL CLASSIFICATION</div>
       <div style="border:0.5px solid #ccc;border-radius:3px;overflow:hidden">${classHTML}</div>
 
     </div>
 
     <!-- RIGHT: Chart -->
     <div style="flex:1.5;min-width:0">
-      <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.5px">▌ GRAIN SIZE DISTRIBUTION CURVE</div>
+      <div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1mm 2mm;margin-bottom:0.5mm;letter-spacing:.3px">&#9646; GRAIN SIZE DISTRIBUTION CURVE</div>
       <div style="border:0.5px solid #ccc;border-radius:3px;overflow:hidden;background:#fafafa">
-        <div id="irm_chartDiv" style="width:100%;height:120mm;"></div>
+        <div id="irm_chartDiv" style="width:100%;height:80mm;"></div>
       </div>
     </div>
 
   </div>
 
   <!-- ══ AUTHORIZATION ══ -->
-  <div style="border-top:2px solid #1A3A6B;margin-top:2mm;padding-top:2mm">
-    <div style="background:#1A3A6B;color:#fff;font-size:7.5pt;font-weight:700;padding:1mm 3mm;margin-bottom:2mm;letter-spacing:.8px;display:inline-block">▌ AUTHORIZATION</div>
+  <div style="border-top:1.5px solid #1A3A6B;margin-top:1mm;padding-top:1mm">
+    <div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:0.8mm 3mm;margin-bottom:1mm;letter-spacing:.5px;display:inline-block">&#9646; AUTHORIZATION</div>
     <table style="width:100%;border-collapse:collapse;font-size:7.5pt">
       <tr>
-        <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-          <div style="font-weight:700;color:#1A3A6B;margin-bottom:3mm;text-align:center;font-size:8pt">Quality Manager</div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <td style="width:33%;border:0.5px solid #bbb;padding:1.2mm 2mm;vertical-align:top">
+          <div style="font-weight:700;color:#1A3A6B;margin-bottom:1.5mm;text-align:center;font-size:8pt">Quality Manager</div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
         </td>
-        <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-          <div style="font-weight:700;color:#1F6B3A;margin-bottom:3mm;text-align:center;font-size:8pt">Technical Manager</div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <td style="width:33%;border:0.5px solid #bbb;padding:1.2mm 2mm;vertical-align:top">
+          <div style="font-weight:700;color:#1F6B3A;margin-bottom:1.5mm;text-align:center;font-size:8pt">Technical Manager</div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
         </td>
-        <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-          <div style="font-weight:700;color:#5B2D8E;margin-bottom:3mm;text-align:center;font-size:8pt">Independent Reviewer<br><span style="font-weight:400;font-size:7pt;color:#666">(ISO 17025)</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-          <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <td style="width:33%;border:0.5px solid #bbb;padding:1.2mm 2mm;vertical-align:top">
+          <div style="font-weight:700;color:#5B2D8E;margin-bottom:1.5mm;text-align:center;font-size:8pt">Independent Reviewer<br><span style="font-weight:400;font-size:7pt;color:#666">(ISO 17025)</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+          <div style="font-size:7pt;color:#444;margin-top:1.5mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
         </td>
       </tr>
     </table>
-    <div style="margin-top:2mm;font-size:6.5pt;color:#aaa;text-align:center">
+    <div style="margin-top:1mm;font-size:6pt;color:#aaa;text-align:center">
       Generated by ASTM D6913-17 Composite Sieving Calculator — ${sieveTypeStr} — ${today}
     </div>
   </div>
@@ -3972,12 +4208,12 @@ function _buildA4HTML(mode){
 }
 
 /* ── Report style helpers (LTR) ── */
-function _tdSt(){ return 'border:0.5px solid #ccc;padding:1.2mm 2mm;text-align:left;direction:ltr'; }
-function _thSt(col){ return `font-weight:700;color:#${col};padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:left;direction:ltr;white-space:nowrap`; }
-function _thC(col){ return `font-weight:700;color:#${col};padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:center;direction:ltr`; }
-function _tdC(extra){ return `border:0.5px solid #ccc;padding:1.2mm 2mm;text-align:center;direction:ltr;${extra||''}`; }
+function _tdSt(){ return 'border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr'; }
+function _thSt(col){ return `font-weight:700;color:#${col};padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:left;direction:ltr;white-space:nowrap`; }
+function _thC(col){ return `font-weight:700;color:#${col};padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:center;direction:ltr`; }
+function _tdC(extra){ return `border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;${extra||''}`; }
 
-function _extractClassHTML(uscsBox, aashtoBox){
+function _extractClassHTML(uscsBox, aashtoBox, mode){
   /* ── Read symbol + name from DOM ── */
   let uscsSymbol='—', uscsName='—', aashtoSymbol='—', aashtoName='—';
   if(uscsBox){
@@ -3994,48 +4230,43 @@ function _extractClassHTML(uscsBox, aashtoBox){
     if(an) aashtoName=an.textContent.trim();
   }
 
-  /* ── Build full description from classification lookup tables ── */
-  const USCS_DESC = {
-    // Clean gravels
-    'GW' :'Well-Graded Gravel',
-    'GP' :'Poorly-Graded Gravel',
-    'GM' :'Silty Gravel',
-    'GC' :'Clayey Gravel',
-    // Dual-symbol gravels
-    'GW-GM':'Well-Graded Gravel with Silt',
-    'GW-GC':'Well-Graded Gravel with Clay',
-    'GP-GM':'Poorly-Graded Gravel with Silt',
-    'GP-GC':'Poorly-Graded Gravel with Clay',
-    // Clean sands
-    'SW' :'Well-Graded Sand',
-    'SP' :'Poorly-Graded Sand',
-    'SM' :'Silty Sand',
-    'SC' :'Clayey Sand',
-    // Dual-symbol sands
-    'SW-SM':'Well-Graded Sand with Silt',
-    'SW-SC':'Well-Graded Sand with Clay',
-    'SP-SM':'Poorly-Graded Sand with Silt',
-    'SP-SC':'Poorly-Graded Sand with Clay',
-    // Fine-grained
-    'ML':'Silt (Low Plasticity)',
-    'MH':'Elastic Silt (High Plasticity)',
-    'CL':'Lean Clay (Low Plasticity)',
-    'CH':'Fat Clay (High Plasticity)',
-    'CL-ML':'Silty Clay (Borderline)',
-    'OL':'Organic Silt / Clay (Low Plasticity)',
-    'OH':'Organic Clay (High Plasticity)',
-    'PT':'Peat',
-    // Pending / insufficient data
-    'GW/GP':'Gravel — Cu & Cc required to determine Well vs Poorly Graded',
-    'SW/SP':'Sand — Cu & Cc required to determine Well vs Poorly Graded',
-    'G*':'Gravel — Insufficient gradation data (D₁₀, D₃₀, D₆₀ not determined)',
-    'S*':'Sand — Insufficient gradation data (D₁₀, D₃₀, D₆₀ not determined)',
-    // Dual symbols — 5–12% fines, Cu/Cc unavailable
-    'GW-GM/GP-GM':'⚠️ Could be Well-Graded OR Poorly-Graded Gravel with Silt — Cu & Cc required to resolve',
-    'GW-GC/GP-GC':'⚠️ Could be Well-Graded OR Poorly-Graded Gravel with Clay — Cu & Cc required to resolve',
-    'SW-SM/SP-SM':'⚠️ Could be Well-Graded OR Poorly-Graded Sand with Silt — Cu & Cc required to resolve',
-    'SW-SC/SP-SC':'⚠️ Could be Well-Graded OR Poorly-Graded Sand with Clay — Cu & Cc required to resolve',
-  };
+  /* ── Get full USCS group name via getUSCSGroupName ── */
+  /* Determine which getFn and LL/PL to use based on mode */
+  const _mode = mode || _lastCalcMode || 'double';
+  let _getFn, _ll, _pl;
+  if(_mode==='double'){
+    _getFn = getCombinedPassing;
+    _ll = parseFloat(document.getElementById('ll')?.value);
+    _pl = parseFloat(document.getElementById('pl')?.value);
+  } else if(_mode==='single'){
+    _getFn = s1_getCombinedPassing;
+    _ll = parseFloat(document.getElementById('s1_ll')?.value);
+    _pl = parseFloat(document.getElementById('s1_pl')?.value);
+  } else {
+    _getFn = ss_getPass;
+    _ll = parseFloat(document.getElementById('ss_ll')?.value);
+    _pl = parseFloat(document.getElementById('ss_pl')?.value);
+  }
+
+  /* Compute full group name — use getUSCSGroupName if symbol is clean */
+  let uscsFullDesc = uscsName; /* fallback */
+  const cleanSym = uscsSymbol && !uscsSymbol.includes('*') && uscsSymbol !== '—' && uscsSymbol !== '⚠️';
+  if(cleanSym && typeof getUSCSGroupName === 'function'){
+    /* For slash-notation (Cu/Cc unavailable), try each part */
+    if(uscsSymbol.includes('/')){
+      const parts = uscsSymbol.split('/');
+      const resolved = parts.map(p=>{
+        const n = getUSCSGroupName(p.trim(), _getFn, _ll, _pl, NaN);
+        return (n && n!==p.trim()) ? n : p.trim();
+      }).join(' / ');
+      uscsFullDesc = resolved;
+    } else {
+      const n = getUSCSGroupName(uscsSymbol, _getFn, _ll, _pl, NaN);
+      if(n && n !== uscsSymbol) uscsFullDesc = n;
+    }
+  }
+
+  /* ── AASHTO description ── */
   const AASHTO_DESC = {
     'A-1-a':'Well-graded gravel / stone',
     'A-1-b':'Coarse sand / gravel',
@@ -4050,25 +4281,14 @@ function _extractClassHTML(uscsBox, aashtoBox){
     'A-7-5':'Clayey soil (elastic)',
     'A-7-6':'Clayey soil (plastic)',
   };
-
-  /* Resolve description — prefer lookup, fallback to DOM name */
-  const uscsDesc  = USCS_DESC[uscsSymbol]  || uscsName  || '—';
-  const aashtoDesc= AASHTO_DESC[aashtoSymbol] || aashtoName || '—';
-
-  /* For dual symbols like GW-GM/GP-GM split on '/' and look up each */
   function resolveDual(sym, map, domName){
-    if(!sym || sym==='—') return domName||'—';
+    if(!sym||sym==='—') return domName||'—';
     if(map[sym]) return map[sym];
-    /* Try splitting dual slash notation: "GW-GM/GP-GM" */
     if(sym.includes('/')){
-      const parts = sym.split('/');
-      const resolved = parts.map(p=>map[p.trim()]||p.trim()).join(' / ');
-      return resolved;
+      return sym.split('/').map(p=>map[p.trim()]||p.trim()).join(' / ');
     }
     return domName||sym;
   }
-
-  const uscsFullDesc   = resolveDual(uscsSymbol,   USCS_DESC,   uscsName);
   const aashtoFullDesc = resolveDual(aashtoSymbol, AASHTO_DESC, aashtoName);
 
   const symStyle=`font-size:13pt;font-weight:900;padding:2px 10px;border-radius:5px;display:inline-block;letter-spacing:1px`;
@@ -4117,6 +4337,37 @@ function _dRow(d10id,d30id,d60id,cuid,ccid,chkid){
     <td style="${_tdC('font-weight:700')}">${cc}</td>
     <td style="${_tdC('font-weight:700;font-size:6.5pt')};color:${gradColor}">${chk}</td>
   </tr>`;
+}
+
+function _extractClassHTML_simple(ssBox){
+  let uscsSymbol='--',aashtoSymbol='--',aashtoName='--';
+  if(ssBox){
+    const badge=ssBox.querySelector('span[style*="border-radius"]');
+    if(badge) uscsSymbol=badge.textContent.trim();
+    const aashtoDiv=ssBox.querySelector('div[style*="fff3e0"]');
+    if(aashtoDiv){
+      const txt=aashtoDiv.textContent.trim();
+      const m=txt.match(/AASHTO:\s*(A-[\w-]+)/);
+      if(m) aashtoSymbol=m[1];
+      aashtoName=txt.replace(/^AASHTO:\s*/,'');
+    }
+  }
+  const ll=parseFloat(document.getElementById('ss_ll')?.value);
+  const pl=parseFloat(document.getElementById('ss_pl')?.value);
+  let uscsFullDesc=uscsSymbol;
+  const cleanSym=uscsSymbol&&!uscsSymbol.includes('*')&&uscsSymbol!='--'&&!uscsSymbol.includes('warning');
+  if(cleanSym&&typeof getUSCSGroupName==='function'){
+    if(uscsSymbol.includes('/')){
+      uscsFullDesc=uscsSymbol.split('/').map(function(p){var n=getUSCSGroupName(p.trim(),ss_getPass,ll,pl,NaN);return(n&&n!==p.trim())?n:p.trim();}).join(' / ');
+    } else {
+      var n=getUSCSGroupName(uscsSymbol,ss_getPass,ll,pl,NaN);
+      if(n&&n!==uscsSymbol) uscsFullDesc=n;
+    }
+  }
+  const AD={'A-1-a':'Well-graded gravel / stone','A-1-b':'Coarse sand / gravel','A-2-4':'Silty/clayey gravel and sand (LL<=40, PI<=10)','A-2-5':'Silty/clayey gravel and sand (LL>40, PI<=10)','A-2-6':'Silty/clayey gravel and sand (LL<=40, PI>10)','A-2-7':'Silty/clayey gravel and sand (LL>40, PI>10)','A-3':'Fine sand (non-plastic)','A-4':'Silty soil (LL<=40, PI<=10)','A-5':'Silty soil (LL>40, PI<=10)','A-6':'Clayey soil (LL<=40, PI>10)','A-7-5':'Clayey soil (elastic)','A-7-6':'Clayey soil (plastic)'};
+  const aFull=AD[aashtoSymbol]||aashtoName||'--';
+  const ss='font-size:13pt;font-weight:900;padding:2px 10px;border-radius:5px;display:inline-block;letter-spacing:1px';
+  return '<table style="width:100%;border-collapse:collapse;font-size:7.5pt;direction:ltr"><thead><tr style="background:#e8d5f5"><th style="font-weight:700;color:#5B2D8E;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:center;direction:ltr;width:35%">Classification System</th><th style="font-weight:700;color:#5B2D8E;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:center;direction:ltr;width:15%">Symbol</th><th style="font-weight:700;color:#5B2D8E;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f4ff;text-align:center;direction:ltr">Group Name (ASTM D2487)</th></tr></thead><tbody><tr style="background:#faf5ff"><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr;font-weight:700;color:#5B2D8E">USCS (ASTM D2487)</td><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;padding:1.5mm 2mm"><span style="'+ss+';background:#5B2D8E;color:#fff">'+uscsSymbol+'</span></td><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr">'+uscsFullDesc+'</td></tr><tr style="background:#fff8f0"><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr;font-weight:700;color:#8B4500">AASHTO (M145)</td><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:center;direction:ltr;padding:1.5mm 2mm"><span style="'+ss+';background:#8B4500;color:#fff">'+aashtoSymbol+'</span></td><td style="border:0.5px solid #ccc;padding:0.8mm 1.5mm;text-align:left;direction:ltr">'+aFull+'</td></tr></tbody></table>';
 }
 
 function _renderIRMChart(mode){
@@ -4240,15 +4491,14 @@ function _buildA4HTML_v2(mode){
   }
   if(!sieveRowsHTML) sieveRowsHTML='<tr><td colspan="4" style="text-align:center;color:#aaa;padding:4mm">لا توجد بيانات</td></tr>';
 
-  /* Classification — use _extractClassHTML for consistent lookup table */
+  /* Classification — use _extractClassHTML with mode for full group name */
   let classHTMLv2 = '—';
   if(mode==='double'){
-    classHTMLv2 = _extractClassHTML(document.getElementById('classResultBox'), document.getElementById('aashtoResultBox'));
+    classHTMLv2 = _extractClassHTML(document.getElementById('classResultBox'), document.getElementById('aashtoResultBox'), 'double');
   } else if(mode==='single'){
-    classHTMLv2 = _extractClassHTML(document.getElementById('s1_classResultBox'), document.getElementById('s1_aashtoResultBox'));
+    classHTMLv2 = _extractClassHTML(document.getElementById('s1_classResultBox'), document.getElementById('s1_aashtoResultBox'), 'single');
   } else {
-    const box=document.getElementById('ss_classBox');
-    classHTMLv2 = box ? box.innerHTML : '—';
+    classHTMLv2 = _extractClassHTML_simple(document.getElementById('ss_classBox'));
   }
 
   /* D values */
@@ -4291,39 +4541,39 @@ function _buildA4HTML_v2(mode){
     </td>
   </tr>
 </table>
-<div style="border-top:3px solid #1A3A6B;border-bottom:1px solid #99b8d6;padding-bottom:0.5mm;margin-bottom:4mm"></div>
+<div style="border-top:3px solid #1A3A6B;border-bottom:1px solid #99b8d6;padding-bottom:0.5mm;margin-bottom:2mm"></div>
 
 <!-- ══ PROJECT INFORMATION ══ -->
 <div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1.5mm;letter-spacing:.8px">▌ PROJECT INFORMATION</div>
-<table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:4mm">
+<table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:2mm">
   <tr>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc;width:12%">Client</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc;width:29%">${p.client}</td>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc;width:12%">Sample No.</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.sampleNo}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc;width:12%">Client</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc;width:29%">${p.client}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc;width:12%">Sample No.</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.sampleNo}</td>
   </tr>
   <tr>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Project</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.project}</td>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Sample Date</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.sampleDate}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Project</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.project}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Sample Date</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.sampleDate}</td>
   </tr>
   <tr>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Location</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.location}</td>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Test Date</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.testDate}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Location</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.location}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Test Date</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.testDate}</td>
   </tr>
   <tr>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Technician</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.tech}</td>
-    <td style="font-weight:700;color:#1A3A6B;padding:1.2mm 2mm;border:0.5px solid #ccc;background:#f0f5fc">Environment</td>
-    <td style="padding:1.2mm 2mm;border:0.5px solid #ccc">${p.env}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Technician</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.tech}</td>
+    <td style="font-weight:700;color:#1A3A6B;padding:0.8mm 1.5mm;border:0.5px solid #ccc;background:#f0f5fc">Environment</td>
+    <td style="padding:0.8mm 1.5mm;border:0.5px solid #ccc">${p.env}</td>
   </tr>
 </table>
 
 <!-- ══ TEST PARAMETERS STRIP ══ -->
-<div style="background:#f5f8ff;border:0.5px solid #c8d8ee;border-radius:3px;padding:2mm 3mm;margin-bottom:4mm">
+<div style="background:#f5f8ff;border:0.5px solid #c8d8ee;border-radius:3px;padding:1.5mm 3mm;margin-bottom:2mm">
   <table style="width:100%;border-collapse:collapse;font-size:7pt">
     <tr>
       <td style="font-weight:700;color:#1F6B3A;padding:0.8mm 2mm;border-right:0.5px solid #d0ddf5;white-space:nowrap">Method</td>
@@ -4342,13 +4592,13 @@ function _buildA4HTML_v2(mode){
 </div>
 
 <!-- ══ GRADATION CHART — FULL WIDTH ══ -->
-<div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1.5mm 3mm;margin-bottom:1mm;letter-spacing:.8px">▌ GRAIN SIZE DISTRIBUTION CURVE</div>
-<div style="border:0.5px solid #c0cfe0;border-radius:2px;overflow:hidden;background:#fafafe;margin-bottom:4mm">
-  <div id="irm_chartDiv" style="width:100%;height:80mm"></div>
+<div style="background:#1A3A6B;color:#fff;font-size:7pt;font-weight:700;padding:1mm 3mm;margin-bottom:0.5mm;letter-spacing:.8px">▌ GRAIN SIZE DISTRIBUTION CURVE</div>
+<div style="border:0.5px solid #c0cfe0;border-radius:2px;overflow:hidden;background:#fafafe;margin-bottom:0">
+  <div id="irm_chartDiv" style="width:100%;height:50mm"></div>
 </div>
 
 <!-- ══ DATA SECTION: SIEVE TABLE LEFT + RESULTS RIGHT ══ -->
-<div style="display:flex;gap:4mm;margin-bottom:4mm;align-items:flex-start">
+<div style="display:flex;gap:3mm;margin-bottom:1mm;align-items:flex-start">
 
   <!-- LEFT 45%: Sieve Analysis Table -->
   <div style="flex:1.1;min-width:0">
@@ -4367,31 +4617,31 @@ function _buildA4HTML_v2(mode){
   </div>
 
   <!-- RIGHT 55%: Results Panel -->
-  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3mm">
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1.5mm">
 
     <!-- Classification -->
     <div>
-      <div style="background:#5B2D8E;color:#fff;font-size:7pt;font-weight:700;padding:1.5mm 3mm;letter-spacing:.8px">▌ SOIL CLASSIFICATION</div>
+      <div style="background:#5B2D8E;color:#fff;font-size:7pt;font-weight:700;padding:0.8mm 2mm;letter-spacing:.5px">▌ SOIL CLASSIFICATION</div>
       <div style="border:0.5px solid #d0c0f0;border-top:none">${classHTMLv2}</div>
     </div>
 
     <!-- Gradation Coefficients -->
     <div>
-      <div style="background:#1F6B3A;color:#fff;font-size:7pt;font-weight:700;padding:1.5mm 3mm;letter-spacing:.8px">▌ GRADATION COEFFICIENTS</div>
+      <div style="background:#1F6B3A;color:#fff;font-size:7pt;font-weight:700;padding:0.8mm 2mm;letter-spacing:.5px">▌ GRADATION COEFFICIENTS</div>
       <table style="width:100%;border-collapse:collapse;font-size:7pt">
         <tr style="background:#e8f5f0">
-          <th style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;color:#1F6B3A">D₁₀ (mm)</th>
-          <th style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;color:#1F6B3A">D₃₀ (mm)</th>
-          <th style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;color:#1F6B3A">D₆₀ (mm)</th>
-          <th style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;color:#8B4500">Cᵤ</th>
-          <th style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;color:#8B4500">Cc</th>
+          <th style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;color:#1F6B3A">D₁₀ (mm)</th>
+          <th style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;color:#1F6B3A">D₃₀ (mm)</th>
+          <th style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;color:#1F6B3A">D₆₀ (mm)</th>
+          <th style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;color:#8B4500">Cᵤ</th>
+          <th style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;color:#8B4500">Cc</th>
         </tr>
         <tr style="background:#f6fcf8">
-          <td style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;font-weight:700">${d10v2}</td>
-          <td style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;font-weight:700">${d30v2}</td>
-          <td style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;font-weight:700">${d60v2}</td>
-          <td style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;font-weight:700">${cuv2}</td>
-          <td style="border:0.5px solid #bbd;padding:1.2mm 1.5mm;text-align:center;font-weight:700">${ccv2}</td>
+          <td style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;font-weight:700">${d10v2}</td>
+          <td style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;font-weight:700">${d30v2}</td>
+          <td style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;font-weight:700">${d60v2}</td>
+          <td style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;font-weight:700">${cuv2}</td>
+          <td style="border:0.5px solid #bbd;padding:0.8mm 1mm;text-align:center;font-weight:700">${ccv2}</td>
         </tr>
         <tr style="background:#fffdf0">
           <td colspan="5" style="border:0.5px solid #bbd;padding:1.5mm 2mm;text-align:center;font-weight:700;font-size:7pt;color:${gradColorV2}">${chkv2.replace(/[✅❌⚠️]/g,'').trim()||'—'}</td>
@@ -4401,54 +4651,59 @@ function _buildA4HTML_v2(mode){
 
     <!-- Particle Size Fractions -->
     <div>
-      <div style="background:#8B4500;color:#fff;font-size:7pt;font-weight:700;padding:1.5mm 3mm;letter-spacing:.8px">▌ PARTICLE SIZE FRACTIONS</div>
+      <div style="background:#8B4500;color:#fff;font-size:7pt;font-weight:700;padding:0.8mm 2mm;letter-spacing:.5px">&#9646; PARTICLE SIZE FRACTIONS</div>
       <table style="width:100%;border-collapse:collapse;font-size:7pt">
         <tr>
-          <td style="border:0.5px solid #ccc;padding:2.5mm;text-align:center">
-            <div style="font-size:6.5pt;color:#888;margin-bottom:1.5mm">% Gravel (&gt;4.75mm)</div>
-            <div style="font-size:15pt;font-weight:900;color:#1A3A6B">${_fGravel2}</div>
+          <td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center">
+            <div style="font-size:6pt;color:#888;margin-bottom:0.5mm">% Gravel (&gt;4.75mm)</div>
+            <div style="font-size:11pt;font-weight:900;color:#1A3A6B">${_fGravel2}</div>
           </td>
-          <td style="border:0.5px solid #ccc;padding:2.5mm;text-align:center">
-            <div style="font-size:6.5pt;color:#888;margin-bottom:1.5mm">% Sand (4.75–0.075mm)</div>
-            <div style="font-size:15pt;font-weight:900;color:#1F6B3A">${_fSand2}</div>
+          <td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center">
+            <div style="font-size:6pt;color:#888;margin-bottom:0.5mm">% Sand (4.75–0.075mm)</div>
+            <div style="font-size:11pt;font-weight:900;color:#1F6B3A">${_fSand2}</div>
           </td>
-          <td style="border:0.5px solid #ccc;padding:2.5mm;text-align:center">
-            <div style="font-size:6.5pt;color:#888;margin-bottom:1.5mm">% Fines (&lt;0.075mm)</div>
-            <div style="font-size:15pt;font-weight:900;color:#8B4500">${_fFines2}</div>
+          <td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center">
+            <div style="font-size:6pt;color:#888;margin-bottom:0.5mm">% Fines (&lt;0.075mm)</div>
+            <div style="font-size:11pt;font-weight:900;color:#8B4500">${_fFines2}</div>
           </td>
         </tr>
       </table>
     </div>
 
+    <!-- Atterberg Limits — compact inside right panel -->
+    ${(()=>{const a2=_getAtterberg(mode);if(a2.ll==='—') return '';const od2=a2.odRatio!=='—'?`<tr><td colspan="3" style="border:0.5px solid #ccc;padding:0.5mm 1mm;font-size:6pt;color:#8B4500;text-align:center;background:#fff9c4">LL(OD)/LL(ND) = <b>${a2.odRatio}</b> ${parseFloat(a2.odRatio)<0.75?'→ Organic':'→ Inorganic'}</td></tr>`:'';return `<div style="background:#8B4500;color:#fff;font-size:6.5pt;font-weight:700;padding:0.8mm 2mm;letter-spacing:.5px">&#9646; ATTERBERG LIMITS <span style="font-weight:400;font-size:6pt;opacity:.8">(ASTM D4318)</span></div><table style="width:100%;border-collapse:collapse;font-size:6.5pt"><tr style="background:#fff3e0"><td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center;width:33%"><div style="font-size:6pt;color:#888">حد السيولة / LL</div><div style="font-size:11pt;font-weight:900;color:#8B4500">${a2.ll}%</div></td><td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center;width:33%"><div style="font-size:6pt;color:#888">حد اللدونة / PL</div><div style="font-size:11pt;font-weight:900;color:#5B2D8E">${a2.pl}%</div></td><td style="border:0.5px solid #ccc;padding:1mm 1.5mm;text-align:center;width:34%"><div style="font-size:6pt;color:#888">مؤشر اللدونة / PI</div><div style="font-size:11pt;font-weight:900;color:#1F6B3A">${a2.pi}%</div></td></tr><tbody>${od2}</tbody></table>`})()}
+
   </div><!-- end right panel -->
+
+
 </div>
 
 <!-- ══ AUTHORIZATION FOOTER ══ -->
-<div style="border-top:2px solid #1A3A6B;margin-top:2mm;padding-top:2mm">
+<div style="border-top:1.5px solid #1A3A6B;margin-top:1mm;padding-top:1mm">
   <div style="background:#333;color:#fff;font-size:7pt;font-weight:700;padding:1mm 3mm;margin-bottom:2mm;letter-spacing:.8px;display:inline-block">▌ AUTHORIZATION</div>
   <table style="width:100%;border-collapse:collapse;font-size:7.5pt">
     <tr>
-      <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-        <div style="font-weight:700;color:#1A3A6B;margin-bottom:3mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #c0d0e8;padding-bottom:1.5mm">Quality Manager</div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+      <td style="width:33%;border:0.5px solid #bbb;padding:1.5mm 2mm;vertical-align:top">
+        <div style="font-weight:700;color:#1A3A6B;margin-bottom:2mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #c0d0e8;padding-bottom:1mm">Quality Manager</div>
+        <div style="font-size:7pt;color:#444;margin-top:1.5mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:1.5mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:1.5mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
       </td>
-      <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-        <div style="font-weight:700;color:#1F6B3A;margin-bottom:3mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #a0d0b0;padding-bottom:1.5mm">Technical Manager</div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+      <td style="width:33%;border:0.5px solid #bbb;padding:1.5mm 2mm;vertical-align:top">
+        <div style="font-weight:700;color:#1F6B3A;margin-bottom:2mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #a0d0b0;padding-bottom:1.5mm">Technical Manager</div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
       </td>
-      <td style="width:33%;border:0.5px solid #bbb;padding:2.5mm 3mm;vertical-align:top">
-        <div style="font-weight:700;color:#5B2D8E;margin-bottom:3mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #d0c0f0;padding-bottom:1.5mm">Independent Reviewer<br><span style="font-weight:400;font-size:6.5pt;color:#888">(ISO 17025)</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
-        <div style="font-size:7pt;color:#444;margin-top:4mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+      <td style="width:33%;border:0.5px solid #bbb;padding:1.5mm 2mm;vertical-align:top">
+        <div style="font-weight:700;color:#5B2D8E;margin-bottom:2mm;text-align:center;font-size:8pt;border-bottom:0.5px solid #d0c0f0;padding-bottom:1mm">Independent Reviewer<br><span style="font-weight:400;font-size:6.5pt;color:#888">(ISO 17025)</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Name: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Signature: <span style="border-bottom:0.5px solid #888;display:inline-block;width:24mm">&nbsp;</span></div>
+        <div style="font-size:7pt;color:#444;margin-top:2mm">Date: <span style="border-bottom:0.5px solid #888;display:inline-block;width:30mm">&nbsp;</span></div>
       </td>
     </tr>
   </table>
-  <div style="margin-top:2mm;font-size:6.5pt;color:#aaa;text-align:center">
+  <div style="margin-top:1mm;font-size:6pt;color:#aaa;text-align:center">
     Generated by ASTM D6913-17 Composite Sieving Calculator — ${sieveTypeStr} — ${today2}
   </div>
 </div>
@@ -4464,14 +4719,14 @@ function printInlineReport(){
 
   const chartDiv = document.getElementById('irm_chartDiv');
 
-  function _doPrint(imgSrc){
+  function _doPrint(imgSrc, chartImgH){
     const clone = a4content.cloneNode(true);
     const liveCD = clone.querySelector('#irm_chartDiv');
     if(liveCD){
       if(imgSrc){
         const img=document.createElement('img');
         img.src=imgSrc;
-        img.style.cssText='width:100%;height:auto;display:block;border:0.5px solid #ccc;border-radius:2px;';
+        img.style.cssText='width:100%;height:'+(chartImgH||'80mm')+';object-fit:fill;display:block;border:0.5px solid #ccc;border-radius:2px;';
         liveCD.replaceWith(img);
       } else {
         liveCD.innerHTML='<div style="text-align:center;padding:12mm;color:#aaa;font-size:8pt">Chart not available — run calculation first</div>';
@@ -4511,21 +4766,20 @@ img { display:block; max-width:100%; }
 <script>
 window.onload = function(){
   var rpt = document.getElementById('rpt');
-  /* A4 usable height = 297mm - 10mm margins = 287mm ≈ 1084px at 96dpi */
-  /* We measure in px then convert: 1mm ≈ 3.7795px */
+  /* A4 usable height = 297mm - 10mm margins = 287mm at 96dpi */
   var pageH = 287 * 3.7795;
   var contentH = rpt.scrollHeight;
-  if(contentH > pageH * 1.02){
-    /* calculate scale to fit exactly one page */
+  if(contentH > pageH * 1.0){
     var scale = pageH / contentH;
-    /* clamp — don't scale below 55% */
-    scale = Math.max(scale, 0.55);
+    /* clamp — don't scale below 45% */
+    scale = Math.max(scale, 0.45);
     rpt.style.transform = 'scale(' + scale.toFixed(4) + ')';
+    rpt.style.transformOrigin = 'top left';
     /* shrink body height so print engine sees single page */
-    document.body.style.height = (contentH * scale) + 'px';
+    document.body.style.height = Math.ceil(contentH * scale) + 'px';
     document.body.style.overflow = 'hidden';
   }
-  setTimeout(function(){ window.print(); window.close(); }, 700);
+  setTimeout(function(){ window.print(); window.close(); }, 900);
 };
 <\/script>
 </body></html>`);
@@ -4533,13 +4787,270 @@ window.onload = function(){
   }
 
   if(window.Plotly && chartDiv && chartDiv.querySelector('.plotly')){
-    Plotly.toImage(chartDiv,{format:'png',width:540,height:340})
-      .then(img=>_doPrint(img))
-      .catch(()=>_doPrint(null));
+    const pngW = (_reportStyle===1) ? 480 : 740;
+    const pngH = (_reportStyle===1) ? 330 : 220;
+    const chartImgH = chartDiv ? (chartDiv.style.height||'80mm') : '80mm';
+    Plotly.toImage(chartDiv,{format:'png',width:pngW,height:pngH})
+      .then(img=>_doPrint(img, chartImgH))
+      .catch(()=>_doPrint(null, chartImgH));
   } else {
-    _doPrint(null);
+    const chartImgH = chartDiv ? (chartDiv.style.height||'80mm') : '80mm';
+    _doPrint(null, chartImgH);
   }
 }
+</script>
+
+<script>
+/* ═══════════════════════════════════════════
+   HEADER CONTROLS — Dark Mode | Lock | Export
+   ═══════════════════════════════════════════ */
+
+/* ── Dark Mode ── */
+let _darkMode = localStorage.getItem('darkMode') === '1';
+function applyDark(){
+  document.body.classList.toggle('dark-mode', _darkMode);
+  const btn   = document.getElementById('btn-dark');
+  const ico   = document.getElementById('dark-icon');
+  const lbl   = document.getElementById('dark-label');
+  if(ico) ico.textContent = _darkMode ? '☀️' : '🌙';
+  if(lbl) lbl.textContent = _darkMode ? 'وضع نهاري' : 'وضع ليلي';
+  if(btn) btn.style.background = _darkMode ? 'rgba(249,168,37,.45)' : 'rgba(255,255,255,.15)';
+}
+function toggleDarkMode(){
+  _darkMode = !_darkMode;
+  localStorage.setItem('darkMode', _darkMode ? '1' : '0');
+  applyDark();
+}
+document.addEventListener('DOMContentLoaded', applyDark);
+applyDark();
+
+/* ── Lock Results ── */
+let _locked = false;
+function toggleLock(){
+  _locked = !_locked;
+  const overlay = document.getElementById('lock-overlay');
+  const banner  = document.getElementById('lock-banner');
+  const btn     = document.getElementById('btn-lock');
+  const ico     = document.getElementById('lock-icon');
+  const lbl     = document.getElementById('lock-label');
+  if(_locked){
+    overlay.style.display = 'block';
+    banner.style.display = 'block';
+    if(btn) btn.style.background = 'rgba(198,40,40,.6)';
+    if(ico) ico.textContent = '🔓';
+    if(lbl) lbl.textContent = 'فتح القفل';
+    document.querySelectorAll('input,select,textarea,button').forEach(el=>{
+      if(el.closest('#lock-banner')||el.id==='btn-lock'||el.id==='btn-dark'||el.id==='btn-top') return;
+      el._wasDisabled = el.disabled;
+      el.disabled = true;
+    });
+    document.querySelectorAll('.card').forEach(c=>{c.style.opacity='.88';c.style.pointerEvents='none';});
+  } else {
+    overlay.style.display = 'none';
+    banner.style.display = 'none';
+    if(btn) btn.style.background = 'rgba(255,255,255,.15)';
+    if(ico) ico.textContent = '🔒';
+    if(lbl) lbl.textContent = 'قفل النتائج';
+    document.querySelectorAll('input,select,textarea,button').forEach(el=>{
+      if(el.closest('#lock-banner')||el.id==='btn-lock'||el.id==='btn-dark'||el.id==='btn-top') return;
+      el.disabled = el._wasDisabled || false;
+    });
+    document.querySelectorAll('.card').forEach(c=>{c.style.opacity='';c.style.pointerEvents='';});
+  }
+}
+
+/* ── Export to Excel ── */
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){
+    alert('جاري تحميل مكتبة Excel، حاول مرة أخرى بعد ثانية / Loading Excel library, try again');
+    return;
+  }
+  const mode = _lastCalcMode||'double';
+  const p    = _getProjectInfo ? _getProjectInfo() : {};
+  const today = new Date().toLocaleDateString('en-GB');
+  const g  = id => (document.getElementById(id)?.textContent||'').trim()||'—';
+
+  /* ── Sieve rows ── */
+  let sieveRows=[];
+  if(mode==='simple'){
+    const LBL={75:'3"',63:'2\u00bd"',50:'2"',37.5:'1\u00bd"',25:'1"',19:'\u00be"',9.5:'\u215c"',4.75:'No.4',2:'No.10',0.425:'No.40',0.15:'No.100',0.075:'No.200'};
+    (SS_SIEVES||[]).forEach(s=>{
+      const pp=(document.getElementById(s.pp)?.textContent||'').trim();
+      const raw=parseFloat(document.getElementById(s.id)?.value);
+      const cr=(!isNaN(raw)&&raw>0)?raw.toFixed(1):'';
+      if(!pp&&!cr) return;
+      sieveRows.push([LBL[s.mm]||String(s.mm), s.mm, cr, pp]);
+    });
+  } else {
+    const srcId=mode==='single'?'s1_summaryBody':'summaryBody';
+    (document.getElementById(srcId)||{querySelectorAll:()=>[]}).querySelectorAll('tr').forEach(tr=>{
+      const tds=tr.querySelectorAll('td');
+      if(tds.length>=4) sieveRows.push([tds[0].innerText.trim(),Number(tds[1].innerText)||tds[1].innerText.trim(),tds[2].innerText.trim(),tds[3].innerText.trim()]);
+    });
+  }
+
+  /* ── Classification ── */
+  let uscsSymbol='—',uscsName='—',aashtoSymbol='—',aashtoName='—';
+  const cb=document.getElementById(mode==='double'?'classResultBox':mode==='single'?'s1_classResultBox':'ss_classBox');
+  if(cb){const ba=cb.querySelector('.class-badge,span[style*="border-radius"]');const nm=cb.querySelector('.class-name');if(ba)uscsSymbol=ba.textContent.trim();if(nm)uscsName=nm.textContent.trim();}
+  const ab=document.getElementById(mode==='double'?'aashtoResultBox':mode==='single'?'s1_aashtoResultBox':null);
+  if(ab){const ba=ab.querySelector('.class-badge');const nm=ab.querySelector('.class-name');if(ba)aashtoSymbol=ba.textContent.trim();if(nm)aashtoName=nm.textContent.trim();}
+
+  /* ── D-values ── */
+  const [d10,d30,d60,cu,cc]=mode==='double'?[g('d10_val'),g('d30_val'),g('d60_val'),g('cu_val'),g('cc_val')]:mode==='single'?[g('s1_d10_val'),g('s1_d30_val'),g('s1_d60_val'),g('s1_cu_val'),g('s1_cc_val')]:[g('ss_d10'),g('ss_d30'),g('ss_d60'),g('ss_cu'),g('ss_cc')];
+
+  /* ── Fractions ── */
+  const GFn=mode==='double'?getCombinedPassing:mode==='single'?s1_getCombinedPassing:ss_getPass;
+  const p475=GFn(4.75),p075=GFn(0.075);
+  const fmtPct=(a,b)=>(!isNaN(a)&&!isNaN(b))?(a-b).toFixed(1):'—';
+  const pGravel=(!isNaN(p475)&&!isNaN(p075))?(100-p475).toFixed(1):'—';
+  const pSand=(!isNaN(p475)&&!isNaN(p075))?(p475-p075).toFixed(1):'—';
+  const pFines=(!isNaN(p075))?p075.toFixed(1):'—';
+
+  /* ══ BUILD SHEET DATA ══ */
+  const modeLabel=mode==='double'?'Double Separation (2-Sep)':mode==='single'?'Single Separation (1-Sep)':'Simple Sieve';
+
+  /* Helper to make a styled header row array */
+  const aoa=[];
+
+  /* Row 0: Main title */
+  aoa.push(['SOIL PARTICLE-SIZE DISTRIBUTION — ASTM D6913','','','','','']);
+  /* Row 1: Engineer name */
+  aoa.push(['\u0645/ \u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f \u0627\u0644\u0642\u0635\u0628\u0649   |   Eng. Mohamed Ahmed Elkasaby','','','','','']);
+  /* Row 2: mode + date */
+  aoa.push(['Analysis Mode: '+modeLabel,'','Report Date: '+today,'','','']);
+  /* Row 3: blank */
+  aoa.push(['','','','','','']);
+
+  /* Row 4: Section — Project Info */
+  aoa.push(['PROJECT INFORMATION','','','','','']);
+  aoa.push(['Client / \u0627\u0644\u0639\u0645\u064a\u0644', p.client||'—', 'Sample No.', p.sampleNo||'—','','']);
+  aoa.push(['Project / \u0627\u0644\u0645\u0634\u0631\u0648\u0639', p.project||'—', 'Received Date', p.sampleDate||'—','','']);
+  aoa.push(['Location / \u0627\u0644\u0645\u0648\u0642\u0639', p.location||'—', 'Test Date', p.testDate||'—','','']);
+  aoa.push(['Technician / \u0627\u0644\u0641\u0646\u064a', p.tech||'—', 'Standard', 'ASTM D6913-17','','']);
+  /* blank */
+  aoa.push(['','','','','','']);
+
+  /* Sieve table header row */
+  const sieveStart=aoa.length;
+  aoa.push(['SIEVE ANALYSIS DATA TABLE','','','','','']);
+  aoa.push(['Sieve / \u0641\u062a\u062d\u0629 \u0627\u0644\u0645\u0646\u062e\u0644','Size (mm)','Cumulative Retained (g)','% Passing / \u0646\u0633\u0628\u0629 \u0627\u0644\u0645\u0631\u0648\u0631','','']);
+  sieveRows.forEach(r=>aoa.push([r[0], r[1], r[2], r[3],'','']));
+  /* blank */
+  aoa.push(['','','','','','']);
+
+  /* Gradation coefficients */
+  aoa.push(['GRADATION COEFFICIENTS','','','','','']);
+  aoa.push(['D\u2081\u2080 (mm)', d10, 'D\u2083\u2080 (mm)', d30, 'D\u2086\u2080 (mm)', d60]);
+  aoa.push(['C\u1d64 (Uniformity)', cu, 'Cc (Curvature)', cc,'','']);
+  aoa.push(['','','','','','']);
+
+  /* Fractions */
+  aoa.push(['PARTICLE SIZE FRACTIONS','','','','','']);
+  aoa.push(['Fraction','% (of total)','','','','']);
+  aoa.push(['Gravel  (> 4.75 mm)', pGravel+'%','','','','']);
+  aoa.push(['Sand  (4.75 \u2013 0.075 mm)', pSand+'%','','','','']);
+  aoa.push(['Fines  (< 0.075 mm)', pFines+'%','','','','']);
+  aoa.push(['','','','','','']);
+
+  /* Classification */
+  aoa.push(['SOIL CLASSIFICATION','','','','','']);
+  aoa.push(['System','Symbol','Group Name (Full Description)','','','']);
+  aoa.push(['USCS  (ASTM D2487)', uscsSymbol, uscsName,'','','']);
+  aoa.push(['AASHTO  (AASHTO M 145)', aashtoSymbol, aashtoName,'','','']);
+
+  /* ══ CREATE WORKBOOK ══ */
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  /* Column widths */
+  ws['!cols']=[{wch:34},{wch:18},{wch:36},{wch:20},{wch:14},{wch:14}];
+
+  /* Row heights */
+  ws['!rows']=[];
+  ws['!rows'][0]={hpx:28};
+  ws['!rows'][1]={hpx:22};
+
+  /* Merges */
+  const M=(r,c1,c2)=>({s:{r,c:c1},e:{r,c:c2}});
+  const merges=[M(0,0,5),M(1,0,5),M(4,0,5)];
+
+  /* Auto-merge section headers */
+  aoa.forEach((row,i)=>{
+    const v=String(row[0]);
+    if(['SIEVE ANALYSIS DATA TABLE','GRADATION COEFFICIENTS','PARTICLE SIZE FRACTIONS','SOIL CLASSIFICATION'].includes(v)){
+      merges.push(M(i,0,5));
+    }
+  });
+
+  /* Sieve column header merges */
+  merges.push(M(sieveStart+1,3,4));
+  ws['!merges']=merges;
+
+  /* ── number format for sieve size column ── */
+  aoa.forEach((row,ri)=>{
+    if(ri > sieveStart+1 && ri < sieveStart+2+sieveRows.length){
+      const ref=XLSX.utils.encode_cell({r:ri,c:1});
+      const num=parseFloat(row[1]);
+      if(!isNaN(num)&&ws[ref]){ws[ref].t='n';ws[ref].v=num;ws[ref].z='0.000';}
+      const ref2=XLSX.utils.encode_cell({r:ri,c:2});
+      const num2=parseFloat(row[2]);
+      if(!isNaN(num2)&&ws[ref2]){ws[ref2].t='n';ws[ref2].v=num2;ws[ref2].z='0.0';}
+      const ref3=XLSX.utils.encode_cell({r:ri,c:3});
+      const num3=parseFloat(row[3]);
+      if(!isNaN(num3)&&ws[ref3]){ws[ref3].t='n';ws[ref3].v=num3;ws[ref3].z='0.0';}
+    }
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Gradation Report');
+
+  /* ── Download ── */
+  const sNo=(p.sampleNo||'Sample').replace(/[^\w\u0600-\u06FF_-]/g,'_');
+  XLSX.writeFile(wb, 'Sieve_Report_'+sNo+'_'+today.replace(/\//g,'-')+'.xlsx');
+
+  /* Toast */
+  const t=document.createElement('div');
+  t.textContent='\u2705 \u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0645\u0644\u0641 Excel \u0628\u0646\u062c\u0627\u062d / Excel file exported successfully';
+  t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1F6B3A;color:#fff;padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity='0';setTimeout(()=>t.remove(),600);},3000);
+}
+
+/* ── PI Auto-Calculate ── */
+function _updatePI(llId, plId, dispId){
+  var ll=parseFloat(document.getElementById(llId)?.value);
+  var pl=parseFloat(document.getElementById(plId)?.value);
+  var el=document.getElementById(dispId);
+  if(!el) return;
+  if(!isNaN(ll)&&!isNaN(pl)&&pl<ll){
+    var pi=(ll-pl).toFixed(1);
+    el.textContent=pi+'%';
+    el.style.color='#1F6B3A';
+    el.style.background='#e8f5e9';
+    el.style.border='1.5px solid #1F6B3A';
+  } else if(!isNaN(ll)&&isNaN(pl)){
+    el.textContent='NP';
+    el.style.color='#888';
+    el.style.background='#f5f5f5';
+    el.style.border='1.5px solid #bbb';
+  } else if(!isNaN(pl)&&!isNaN(ll)&&pl>=ll){
+    el.textContent='⚠️ PL\u2265LL';
+    el.style.color='#c62828';
+    el.style.background='#fff0f0';
+    el.style.border='1.5px solid #c62828';
+  } else {
+    el.textContent='—';
+    el.style.color='#1F6B3A';
+    el.style.background='#e8f5e9';
+    el.style.border='1.5px solid #1F6B3A';
+  }
+}
+
+/* ── Scroll-to-Top visibility ── */
+window.addEventListener('scroll',function(){
+  var btn=document.getElementById('btn-top');
+  if(btn) btn.classList.toggle('visible', window.scrollY>280);
+},{passive:true});
 </script>
 </body>
 </html>
