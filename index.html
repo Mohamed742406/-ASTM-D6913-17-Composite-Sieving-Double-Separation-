@@ -159,6 +159,7 @@ td input[type=number]:focus{outline:none;border-color:#5B2D8E}
 </style>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -4859,161 +4860,442 @@ function toggleLock(){
   }
 }
 
-/* ── Export to Excel ── */
+/* ── Export to Excel (ExcelJS - Full Styling) ── */
 function exportToExcel(){
-  if(typeof XLSX==='undefined'){
-    alert('جاري تحميل مكتبة Excel، حاول مرة أخرى بعد ثانية / Loading Excel library, try again');
-    return;
+
+  function _toast(msg,bg){
+    const t=document.createElement('div');t.textContent=msg;
+    t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:'+(bg||'#1F6B3A')+';color:#fff;padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+    document.body.appendChild(t);setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity='0';setTimeout(()=>t.remove(),600);},4000);
   }
-  const mode = _lastCalcMode||'double';
-  const p    = _getProjectInfo ? _getProjectInfo() : {};
-  const today = new Date().toLocaleDateString('en-GB');
-  const g  = id => (document.getElementById(id)?.textContent||'').trim()||'—';
+
+  if(typeof ExcelJS==='undefined'){
+    _toast('⏳ جاري تحميل المكتبة... / Loading library...','#1F4E79');
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload=()=>exportToExcel();s.onerror=()=>_toast('❌ فشل تحميل المكتبة','#c0392b');
+    document.head.appendChild(s);return;
+  }
+
+  /* ══ COLLECT DATA ══ */
+  /* ── Detect active tab ── */
+  function _getActiveMode(){
+    if(_lastCalcMode) return _lastCalcMode;
+    if(document.getElementById('tab_simp')?.classList.contains('active'))   return 'simple';
+    if(document.getElementById('tab_single')?.classList.contains('active')) return 'single';
+    if(document.getElementById('tab_test')?.classList.contains('active'))   return 'double';
+    if(document.getElementById('ss_total')?.value)  return 'simple';
+    if(document.getElementById('s1_total')?.value)  return 'single';
+    return 'double';
+  }
+  const mode=_getActiveMode();
+  const p=_getProjectInfo?_getProjectInfo():{};
+  const today=new Date().toLocaleDateString('en-GB');
+  const gv=id=>(document.getElementById(id)?.value||'').trim();
+  const gt=id=>(document.getElementById(id)?.textContent||'').trim()||'—';
+  const gn=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?'—':v;};
+
+  /* ── Atterberg Limits ── */
+  const ab=_getAtterberg?_getAtterberg(mode):{ll:'—',pl:'—',pi:'—',odRatio:'—'};
+  const llOdId=mode==='double'?'ll_od':mode==='single'?'s1_ll_od':'ss_ll_od';
+  const llNdId=mode==='double'?'ll_nd':mode==='single'?'s1_ll_nd':'ss_ll_nd';
+  const llOdVal=gv(llOdId)||'—'; const llNdVal=gv(llNdId)||'—';
+  const pfId=mode==='double'?'plasticityFlag':mode==='single'?'s1_plasticityFlag':'ss_isPeat';
+  const isPeat=mode==='simple'?!!(document.getElementById('ss_isPeat')?.checked):false;
+
+  /* ── Sample mass data ── */
+  let totalMassStr='—', washedMassStr='—', sep1Str='—', sep2Str='N/A';
+  let cscf1='—', cscf2='N/A', smdStr='—', subsStr='—', cuCcCheck='—';
+  if(mode==='double'){
+    const sep1El=document.getElementById('sep1');
+    const sep2El=document.getElementById('sep2');
+    sep1Str=sep1El?sep1El.options[sep1El.selectedIndex]?.text||'—':'—';
+    sep2Str=sep2El?sep2El.options[sep2El.selectedIndex]?.text||'—':'—';
+    smdStr=gt('smd_disp'); subsStr=gt('subs1md_disp');
+    cscf1=gt('cscf1_val'); cscf2=gt('cscf2_val');
+    cuCcCheck=gt('cucc_check');
+  }else if(mode==='single'){
+    const sepEl=document.getElementById('s1_sep');
+    sep1Str=sepEl?sepEl.options[sepEl.selectedIndex]?.text||'—':'—';
+    sep2Str='N/A — Single Separation';
+    smdStr=gt('s1_smd_disp'); subsStr=gt('s1_fpmd_disp');
+    cscf1=gt('s1_cscf_val'); cuCcCheck=gt('s1_cucc_check');
+  }else{
+    totalMassStr=(gv('ss_total')||'—')+' g';
+    washedMassStr=gv('ss_washed')?gv('ss_washed')+' g':'—';
+    smdStr=totalMassStr; cuCcCheck=gt('ss_cucc_check')||'—';
+  }
 
   /* ── Sieve rows ── */
   let sieveRows=[];
   if(mode==='simple'){
-    const LBL={75:'3"',63:'2\u00bd"',50:'2"',37.5:'1\u00bd"',25:'1"',19:'\u00be"',9.5:'\u215c"',4.75:'No.4',2:'No.10',0.425:'No.40',0.15:'No.100',0.075:'No.200'};
+    const LBL={75:'3"',63:'2½"',50:'2"',37.5:'1½"',25:'1"',19:'¾"',9.5:'⅜"',4.75:'No.4',2:'No.10',0.425:'No.40',0.15:'No.100',0.075:'No.200'};
     (SS_SIEVES||[]).forEach(s=>{
       const pp=(document.getElementById(s.pp)?.textContent||'').trim();
       const raw=parseFloat(document.getElementById(s.id)?.value);
       const cr=(!isNaN(raw)&&raw>0)?raw.toFixed(1):'';
-      if(!pp&&!cr) return;
-      sieveRows.push([LBL[s.mm]||String(s.mm), s.mm, cr, pp]);
+      if(!pp&&!cr)return;
+      sieveRows.push([LBL[s.mm]||String(s.mm),s.mm,cr||'—',pp||'—']);
     });
-  } else {
+  }else{
     const srcId=mode==='single'?'s1_summaryBody':'summaryBody';
     (document.getElementById(srcId)||{querySelectorAll:()=>[]}).querySelectorAll('tr').forEach(tr=>{
       const tds=tr.querySelectorAll('td');
-      if(tds.length>=4) sieveRows.push([tds[0].innerText.trim(),Number(tds[1].innerText)||tds[1].innerText.trim(),tds[2].innerText.trim(),tds[3].innerText.trim()]);
+      if(tds.length>=4)sieveRows.push([tds[0].innerText.trim(),tds[1].innerText.trim(),tds[2].innerText.trim(),tds[3].innerText.trim()]);
     });
   }
 
-  /* ── Classification ── */
-  let uscsSymbol='—',uscsName='—',aashtoSymbol='—',aashtoName='—';
-  const cb=document.getElementById(mode==='double'?'classResultBox':mode==='single'?'s1_classResultBox':'ss_classBox');
-  if(cb){const ba=cb.querySelector('.class-badge,span[style*="border-radius"]');const nm=cb.querySelector('.class-name');if(ba)uscsSymbol=ba.textContent.trim();if(nm)uscsName=nm.textContent.trim();}
-  const ab=document.getElementById(mode==='double'?'aashtoResultBox':mode==='single'?'s1_aashtoResultBox':null);
-  if(ab){const ba=ab.querySelector('.class-badge');const nm=ab.querySelector('.class-name');if(ba)aashtoSymbol=ba.textContent.trim();if(nm)aashtoName=nm.textContent.trim();}
-
   /* ── D-values ── */
-  const [d10,d30,d60,cu,cc]=mode==='double'?[g('d10_val'),g('d30_val'),g('d60_val'),g('cu_val'),g('cc_val')]:mode==='single'?[g('s1_d10_val'),g('s1_d30_val'),g('s1_d60_val'),g('s1_cu_val'),g('s1_cc_val')]:[g('ss_d10'),g('ss_d30'),g('ss_d60'),g('ss_cu'),g('ss_cc')];
+  const dIds=mode==='double'?['d10_val','d30_val','d60_val','cu_val','cc_val']:
+             mode==='single'?['s1_d10_val','s1_d30_val','s1_d60_val','s1_cu_val','s1_cc_val']:
+             ['ss_d10','ss_d30','ss_d60','ss_cu','ss_cc'];
+  const [d10,d30,d60,cu,cc]=dIds.map(id=>gt(id));
 
   /* ── Fractions ── */
   const GFn=mode==='double'?getCombinedPassing:mode==='single'?s1_getCombinedPassing:ss_getPass;
   const p475=GFn(4.75),p075=GFn(0.075);
-  const fmtPct=(a,b)=>(!isNaN(a)&&!isNaN(b))?(a-b).toFixed(1):'—';
-  const pGravel=(!isNaN(p475)&&!isNaN(p075))?(100-p475).toFixed(1):'—';
-  const pSand=(!isNaN(p475)&&!isNaN(p075))?(p475-p075).toFixed(1):'—';
-  const pFines=(!isNaN(p075))?p075.toFixed(1):'—';
+  const pGravel=(!isNaN(p475)&&!isNaN(p075))?(100-p475).toFixed(1)+'%':'—';
+  const pSand=(!isNaN(p475)&&!isNaN(p075))?(p475-p075).toFixed(1)+'%':'—';
+  const pFines=(!isNaN(p075))?p075.toFixed(1)+'%':'—';
 
-  /* ══ BUILD SHEET DATA ══ */
-  const modeLabel=mode==='double'?'Double Separation (2-Sep)':mode==='single'?'Single Separation (1-Sep)':'Simple Sieve';
-
-  /* Helper to make a styled header row array */
-  const aoa=[];
-
-  /* Row 0: Main title */
-  aoa.push(['SOIL PARTICLE-SIZE DISTRIBUTION — ASTM D6913','','','','','']);
-  /* Row 1: Engineer name */
-  aoa.push(['\u0645/ \u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f \u0627\u0644\u0642\u0635\u0628\u0649   |   Eng. Mohamed Ahmed Elkasaby','','','','','']);
-  /* Row 2: mode + date */
-  aoa.push(['Analysis Mode: '+modeLabel,'','Report Date: '+today,'','','']);
-  /* Row 3: blank */
-  aoa.push(['','','','','','']);
-
-  /* Row 4: Section — Project Info */
-  aoa.push(['PROJECT INFORMATION','','','','','']);
-  aoa.push(['Client / \u0627\u0644\u0639\u0645\u064a\u0644', p.client||'—', 'Sample No.', p.sampleNo||'—','','']);
-  aoa.push(['Project / \u0627\u0644\u0645\u0634\u0631\u0648\u0639', p.project||'—', 'Received Date', p.sampleDate||'—','','']);
-  aoa.push(['Location / \u0627\u0644\u0645\u0648\u0642\u0639', p.location||'—', 'Test Date', p.testDate||'—','','']);
-  aoa.push(['Technician / \u0627\u0644\u0641\u0646\u064a', p.tech||'—', 'Standard', 'ASTM D6913-17','','']);
-  /* blank */
-  aoa.push(['','','','','','']);
-
-  /* Sieve table header row */
-  const sieveStart=aoa.length;
-  aoa.push(['SIEVE ANALYSIS DATA TABLE','','','','','']);
-  aoa.push(['Sieve / \u0641\u062a\u062d\u0629 \u0627\u0644\u0645\u0646\u062e\u0644','Size (mm)','Cumulative Retained (g)','% Passing / \u0646\u0633\u0628\u0629 \u0627\u0644\u0645\u0631\u0648\u0631','','']);
-  sieveRows.forEach(r=>aoa.push([r[0], r[1], r[2], r[3],'','']));
-  /* blank */
-  aoa.push(['','','','','','']);
-
-  /* Gradation coefficients */
-  aoa.push(['GRADATION COEFFICIENTS','','','','','']);
-  aoa.push(['D\u2081\u2080 (mm)', d10, 'D\u2083\u2080 (mm)', d30, 'D\u2086\u2080 (mm)', d60]);
-  aoa.push(['C\u1d64 (Uniformity)', cu, 'Cc (Curvature)', cc,'','']);
-  aoa.push(['','','','','','']);
-
-  /* Fractions */
-  aoa.push(['PARTICLE SIZE FRACTIONS','','','','','']);
-  aoa.push(['Fraction','% (of total)','','','','']);
-  aoa.push(['Gravel  (> 4.75 mm)', pGravel+'%','','','','']);
-  aoa.push(['Sand  (4.75 \u2013 0.075 mm)', pSand+'%','','','','']);
-  aoa.push(['Fines  (< 0.075 mm)', pFines+'%','','','','']);
-  aoa.push(['','','','','','']);
-
-  /* Classification */
-  aoa.push(['SOIL CLASSIFICATION','','','','','']);
-  aoa.push(['System','Symbol','Group Name (Full Description)','','','']);
-  aoa.push(['USCS  (ASTM D2487)', uscsSymbol, uscsName,'','','']);
-  aoa.push(['AASHTO  (AASHTO M 145)', aashtoSymbol, aashtoName,'','','']);
-
-  /* ══ CREATE WORKBOOK ══ */
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  /* Column widths */
-  ws['!cols']=[{wch:34},{wch:18},{wch:36},{wch:20},{wch:14},{wch:14}];
-
-  /* Row heights */
-  ws['!rows']=[];
-  ws['!rows'][0]={hpx:28};
-  ws['!rows'][1]={hpx:22};
-
-  /* Merges */
-  const M=(r,c1,c2)=>({s:{r,c:c1},e:{r,c:c2}});
-  const merges=[M(0,0,5),M(1,0,5),M(4,0,5)];
-
-  /* Auto-merge section headers */
-  aoa.forEach((row,i)=>{
-    const v=String(row[0]);
-    if(['SIEVE ANALYSIS DATA TABLE','GRADATION COEFFICIENTS','PARTICLE SIZE FRACTIONS','SOIL CLASSIFICATION'].includes(v)){
-      merges.push(M(i,0,5));
+  /* ── USCS Classification from classTableBody ── */
+  let uscsSymbol='—',uscsName='—',uscsUse='—',aashtoSymbol='—',aashtoName='—',aashtoGI='—',aashtoUse='—';
+  const tbodyId=mode==='double'?'classTableBody':mode==='single'?'s1_classTableBody':null;
+  const tbody=tbodyId?document.getElementById(tbodyId):null;
+  if(tbody){
+    const rows=tbody.querySelectorAll('tr');
+    rows.forEach((tr,i)=>{
+      const tds=tr.querySelectorAll('td');
+      if(tds.length>=3){
+        const sys=tds[0].textContent.trim();
+        const sym=tds[1].textContent.trim();
+        const name=tds[2].textContent.trim();
+        const use=tds[4]?tds[4].textContent.trim():'—';
+        if(sys.includes('USCS')){uscsSymbol=sym;uscsName=name;uscsUse=use;}
+        else if(sys.includes('AASHTO')){
+          aashtoSymbol=sym.split('\n')[0].trim();
+          const giMatch=sym.match(/GI\s*=\s*([\d.]+)/);
+          aashtoGI=giMatch?'GI = '+giMatch[1]:'—';
+          aashtoName=name;aashtoUse=use;
+        }
+      }
+    });
+  }
+  /* ── Simple sieve: read classification from ss_classBox HTML ── */
+  if(mode==='simple'){
+    const cb=document.getElementById('ss_classBox');
+    if(cb){
+      /* USCS symbol — first <span> with inline background color */
+      const spanEl=cb.querySelector('span[style*="background"]');
+      if(spanEl) uscsSymbol=spanEl.textContent.trim();
+      /* USCS group name — first <div> after the badge span */
+      const divs=cb.querySelectorAll('div');
+      divs.forEach(d=>{
+        const t=d.textContent.trim();
+        /* AASHTO line looks like: "AASHTO: A-1-b — Coarse sand / gravel (GI=0)" */
+        if(t.startsWith('AASHTO:')){
+          const m=t.match(/AASHTO:\s*([^\s—–-]+(?:\s*[-–]\s*\w+)?)\s*[—–-]+\s*(.+?)\s*\(GI\s*=\s*([\d.]+)\)/);
+          if(m){aashtoSymbol=m[1].trim();aashtoName=m[2].trim();aashtoGI='GI = '+m[3];}
+          else{
+            /* fallback: grab everything after "AASHTO: " */
+            const raw=t.replace('AASHTO:','').trim();
+            const parts=raw.split(/[—–]/);
+            if(parts[0]) aashtoSymbol=parts[0].trim();
+            if(parts[1]) aashtoName=parts[1].replace(/\(GI=.*\)/,'').trim();
+          }
+        } else if(uscsName==='—' && uscsSymbol!=='—' && t.includes(uscsSymbol) && t.length>uscsSymbol.length+2){
+          uscsName=t;
+        }
+      });
+      /* uscsName: look for the colored div right below the badge */
+      if(uscsName==='—'){
+        const nameDiv=cb.querySelector('div[style*="font-weight:700"],div[style*="font-weight: 700"]');
+        if(nameDiv) uscsName=nameDiv.textContent.trim();
+      }
     }
+  }
+  /* also try aashtoResultBox directly for double/single */
+  const abEl=document.getElementById(mode==='double'?'aashtoResultBox':mode==='single'?'s1_aashtoResultBox':null);
+  if(abEl&&aashtoSymbol==='—'){
+    const ba=abEl.querySelector('.class-badge');const nm=abEl.querySelector('.class-name');
+    if(ba)aashtoSymbol=ba.textContent.trim();if(nm)aashtoName=nm.textContent.trim();
+  }
+
+  const modeLabel=mode==='double'?'Double Separation (2-Sep)':mode==='single'?'Single Separation (1-Sep)':'Simple Sieve Analysis';
+
+  /* ══ BUILD WORKBOOK ══ */
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Elkasaby Lab — ASTM D6913';wb.created=new Date();
+  const ws=wb.addWorksheet('Gradation Report',{
+    pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1},
+    views:[{showGridLines:false}]
   });
+  ws.columns=[{width:36},{width:14},{width:38},{width:26},{width:16},{width:14}];
 
-  /* Sieve column header merges */
-  merges.push(M(sieveStart+1,3,4));
-  ws['!merges']=merges;
+  /* ── Color palette ── */
+  const C={
+    titleBg:'1F4E79',titleFg:'FFFFFF',
+    engBg:'2E75B6',engFg:'FFFFFF',
+    modeBg:'D6E4F0',modeFg:'1F4E79',
+    secBg:'1F6B3A',secFg:'FFFFFF',
+    colHdrBg:'154360',colHdrFg:'FFFFFF',
+    labelBg:'EBF5FB',valueBg:'FFFFFF',
+    row1:'EBF5FB',row2:'FFFFFF',
+    warnBg:'FFF3CD',warnFg:'856404',
+    chartBg:'F0F7FF',border:'AAAAAA',
+    uscsBg:'F3E5FF',aashtoBg:'FFF3E0',
+  };
 
-  /* ── number format for sieve size column ── */
-  aoa.forEach((row,ri)=>{
-    if(ri > sieveStart+1 && ri < sieveStart+2+sieveRows.length){
-      const ref=XLSX.utils.encode_cell({r:ri,c:1});
-      const num=parseFloat(row[1]);
-      if(!isNaN(num)&&ws[ref]){ws[ref].t='n';ws[ref].v=num;ws[ref].z='0.000';}
-      const ref2=XLSX.utils.encode_cell({r:ri,c:2});
-      const num2=parseFloat(row[2]);
-      if(!isNaN(num2)&&ws[ref2]){ws[ref2].t='n';ws[ref2].v=num2;ws[ref2].z='0.0';}
-      const ref3=XLSX.utils.encode_cell({r:ri,c:3});
-      const num3=parseFloat(row[3]);
-      if(!isNaN(num3)&&ws[ref3]){ws[ref3].t='n';ws[ref3].v=num3;ws[ref3].z='0.0';}
+  /* ── Helpers ── */
+  const font=(bold,sz,fg,italic)=>({bold:!!bold,size:sz||11,color:{argb:'FF'+(fg||'000000')},name:'Calibri',italic:!!italic});
+  const fill=hex=>({type:'pattern',pattern:'solid',fgColor:{argb:'FF'+hex}});
+  const aln=(h,v,wrap)=>({horizontal:h||'left',vertical:v||'middle',wrapText:!!wrap});
+  const bdr=(col,st)=>{const b={style:st||'thin',color:{argb:'FF'+(col||'AAAAAA')}};return{top:b,bottom:b,left:b,right:b};};
+
+  let R=1;
+
+  /* ── helper: add section header ── */
+  function secHdr(label,height){
+    const row=ws.getRow(R);row.height=height||22;
+    ws.mergeCells(R,1,R,6);
+    const c=row.getCell(1);c.value=label;
+    c.font=font(true,12,C.secFg);c.fill=fill(C.secBg);c.alignment=aln('left','middle');
+    row.commit();R++;
+  }
+
+  /* ── helper: add col header row ── */
+  function colHdr(labels,heights,merges){
+    const row=ws.getRow(R);row.height=heights||36;
+    labels.forEach((lbl,i)=>{
+      const cell=row.getCell(i+1);cell.value=lbl;
+      cell.font=font(true,10,C.colHdrFg);cell.fill=fill(C.colHdrBg);
+      cell.alignment=aln('center','middle',true);cell.border=bdr(C.border);
+    });
+    if(merges)merges.forEach(([c1,c2])=>ws.mergeCells(R,c1,R,c2));
+    row.commit();R++;
+  }
+
+  /* ── helper: key-value row ── */
+  function kvRow(pairs,bg1,bg2,height){
+    /* pairs: [{k,v}, {k,v}] up to 3 pairs filling 6 cols */
+    const row=ws.getRow(R);row.height=height||18;
+    pairs.forEach(({k,v},i)=>{
+      const ci=i*2+1;
+      const ck=row.getCell(ci);ck.value=k;ck.font=font(true,10,'000000');ck.fill=fill(bg1||C.labelBg);ck.alignment=aln('left','middle');ck.border=bdr(C.border);
+      const cv=row.getCell(ci+1);cv.value=(v===undefined||v===null)?'—':String(v);cv.font=font(false,10,'000000');cv.fill=fill(bg2||C.valueBg);cv.alignment=aln('left','middle');cv.border=bdr(C.border);
+    });
+    if(pairs.length===1)ws.mergeCells(R,2,R,6);
+    else if(pairs.length===2)ws.mergeCells(R,5,R,6);
+    row.commit();R++;
+  }
+
+  /* ── helper: blank spacer ── */
+  function blank(h){ws.getRow(R).height=h||5;R++;}
+
+  /* ══════════════════════════════════
+     TITLE BLOCK
+  ══════════════════════════════════ */
+  /* R1: Main Title */
+  {const row=ws.getRow(R);row.height=34;ws.mergeCells(R,1,R,6);
+  const c=row.getCell(1);c.value='SOIL PARTICLE-SIZE DISTRIBUTION — ASTM D6913';
+  c.font=font(true,15,C.titleFg);c.fill=fill(C.titleBg);c.alignment=aln('center','middle');row.commit();R++;}
+
+  /* R2: Engineer */
+  {const row=ws.getRow(R);row.height=20;ws.mergeCells(R,1,R,6);
+  const c=row.getCell(1);c.value='م/ محمد أحمد القصبي   |   Eng. Mohamed Ahmed Elkasaby';
+  c.font=font(false,11,C.engFg);c.fill=fill(C.engBg);c.alignment=aln('center','middle');row.commit();R++;}
+
+  /* R3: Mode + Date */
+  {const row=ws.getRow(R);row.height=18;ws.mergeCells(R,1,R,3);ws.mergeCells(R,4,R,6);
+  const c1=row.getCell(1);c1.value='Analysis Mode: '+modeLabel;c1.font=font(false,10,C.modeFg);c1.fill=fill(C.modeBg);c1.alignment=aln('left','middle');
+  const c4=row.getCell(4);c4.value='Report Date: '+today;c4.font=font(false,10,C.modeFg);c4.fill=fill(C.modeBg);c4.alignment=aln('right','middle');
+  row.commit();R++;}
+
+  blank(5);
+
+  /* ══════════════════════════════════
+     1. PROJECT INFORMATION
+  ══════════════════════════════════ */
+  secHdr('1 — PROJECT INFORMATION');
+  kvRow([{k:'Client / العميل',v:p.client||'—'},{k:'Sample No.',v:p.sampleNo||'—'},{k:'Standard',v:'ASTM D6913-17'}]);
+  kvRow([{k:'Project / المشروع',v:p.project||'—'},{k:'Received Date',v:p.sampleDate||'—'},{k:'Test Date',v:p.testDate||'—'}]);
+  kvRow([{k:'Location / الموقع',v:p.location||'—'},{k:'Technician / الفني',v:p.tech||'—'},{k:'Method',v:p.method||'ASTM D6913-17'}]);
+  blank();
+
+  /* ══════════════════════════════════
+     2. TEST PARAMETERS
+  ══════════════════════════════════ */
+  secHdr('2 — TEST PARAMETERS');
+  kvRow([{k:'Sieve Analysis Type',v:modeLabel},{k:'Separation 1',v:sep1Str}]);
+  if(mode!=='simple') kvRow([{k:'Separation 2',v:sep2Str},{k:'Coarse Correction Factor 1',v:cscf1}]);
+  if(mode==='double') kvRow([{k:'Coarse Correction Factor 2',v:cscf2},{k:'Sample Mass (Dry)',v:smdStr}]);
+  if(mode!=='double') kvRow([{k:'Total Dry Mass',v:smdStr},{k:'Washed Mass (Sub-200)',v:subsStr||washedMassStr}]);
+  blank();
+
+  /* ══════════════════════════════════
+     3. ATTERBERG LIMITS
+  ══════════════════════════════════ */
+  secHdr('3 — ATTERBERG LIMITS  (ASTM D4318)');
+  colHdr(['Parameter','Value (%)','','Parameter','Value (%)',''],28,[[2,3],[5,6]]);
+  /* LL */
+  {const row=ws.getRow(R);row.height=18;ws.mergeCells(R,2,R,3);ws.mergeCells(R,5,R,6);
+  [{c:1,v:'Liquid Limit (LL)',bold:true,bg:C.labelBg},{c:2,v:ab.ll,bold:false,bg:C.valueBg},
+   {c:4,v:'Plastic Limit (PL)',bold:true,bg:C.labelBg},{c:5,v:ab.pl,bold:false,bg:C.valueBg}].forEach(({c,v,bold,bg})=>{
+    const cell=row.getCell(c);cell.value=v;cell.font=font(bold,10,'000000');cell.fill=fill(bg);cell.alignment=aln('center','middle');cell.border=bdr(C.border);
+  });row.commit();R++;}
+  /* PI */
+  {const row=ws.getRow(R);row.height=18;ws.mergeCells(R,2,R,3);ws.mergeCells(R,5,R,6);
+  const piIsNP=ab.pi==='NP'||ab.pi==='—';
+  [{c:1,v:'Plasticity Index (PI)',bold:true,bg:C.labelBg},{c:2,v:ab.pi,bold:true,bg:piIsNP?C.valueBg:'E8F5E9'},
+   {c:4,v:'OD Ratio (LL_od/LL_nd)',bold:true,bg:C.labelBg},{c:5,v:ab.odRatio,bold:false,bg:C.valueBg}].forEach(({c,v,bold,bg})=>{
+    const cell=row.getCell(c);cell.value=v;cell.font=font(bold,10,'000000');cell.fill=fill(bg);cell.alignment=aln('center','middle');cell.border=bdr(C.border);
+  });row.commit();R++;}
+  /* OD values */
+  if(llOdVal!=='—'||llNdVal!=='—'){
+    kvRow([{k:'LL (Oven-Dried)',v:llOdVal},{k:'LL (Not Dried)',v:llNdVal}]);
+  }
+  const piNote=isPeat?'⚠️ Peat (PT) — Highly Organic':ab.pi==='NP'?'Non-Plastic (NP) soil':Number(ab.pi)>7?'Plastic soil (PI > 7)':'Low plasticity or NP';
+  {const row=ws.getRow(R);row.height=18;ws.mergeCells(R,1,R,6);
+  const c=row.getCell(1);c.value='Note: '+piNote;c.font=font(false,9,'555555',true);c.fill=fill('FFFDE7');c.alignment=aln('left','middle');row.commit();R++;}
+  blank();
+
+  /* ══════════════════════════════════
+     4. SIEVE ANALYSIS DATA
+  ══════════════════════════════════ */
+  secHdr('4 — SIEVE ANALYSIS DATA TABLE  (ASTM D6913)');
+  colHdr(['Sieve / فتحة المنخل','Size (mm)','Cumul. Retained (g)','% Passing / نسبة المرور','',''],38,[[4,6]]);
+
+  if(sieveRows.length===0){
+    const row=ws.getRow(R);row.height=22;ws.mergeCells(R,1,R,6);
+    const c=row.getCell(1);c.value='— No sieve data entered —';c.font=font(false,10,'888888');c.fill=fill(C.row2);c.alignment=aln('center','middle');c.border=bdr(C.border);
+    row.commit();R++;
+  }else{
+    sieveRows.forEach((sr,idx)=>{
+      const bg=idx%2===0?C.row1:C.row2;
+      const row=ws.getRow(R);row.height=18;ws.mergeCells(R,4,R,6);
+      /* sieve label */
+      {const c=row.getCell(1);c.value=sr[0];c.font=font(false,10,'000000');c.fill=fill(bg);c.alignment=aln('left','middle');c.border=bdr(C.border);}
+      /* size mm */
+      {const c=row.getCell(2);const n=parseFloat(sr[1]);c.value=!isNaN(n)?n:sr[1];if(!isNaN(n))c.numFmt='0.000';c.font=font(false,10,'000000');c.fill=fill(bg);c.alignment=aln('center','middle');c.border=bdr(C.border);}
+      /* cumulative retained */
+      {const c=row.getCell(3);const n=parseFloat(sr[2]);c.value=!isNaN(n)?n:sr[2];if(!isNaN(n))c.numFmt='0.0';c.font=font(false,10,'000000');c.fill=fill(bg);c.alignment=aln('center','middle');c.border=bdr(C.border);}
+      /* % passing */
+      {const c=row.getCell(4);const n=parseFloat(sr[3]);c.value=!isNaN(n)?n:sr[3];if(!isNaN(n))c.numFmt='0.0';c.font=font(true,10,'1F4E79');c.fill=fill(bg);c.alignment=aln('center','middle');c.border=bdr(C.border);}
+      row.commit();R++;
+    });
+  }
+  blank();
+
+  /* ══════════════════════════════════
+     5. GRADATION COEFFICIENTS
+  ══════════════════════════════════ */
+  secHdr('5 — GRADATION COEFFICIENTS');
+  colHdr(['Parameter','Value','Parameter','Value','Parameter','Value'],24);
+  {const row=ws.getRow(R);row.height=20;
+  [['D₁₀ (mm)',d10],['D₃₀ (mm)',d30],['D₆₀ (mm)',d60]].forEach(([lbl,val],i)=>{
+    const ci=i*2+1;
+    const ck=row.getCell(ci);ck.value=lbl;ck.font=font(true,10,'000000');ck.fill=fill(C.labelBg);ck.alignment=aln('left','middle');ck.border=bdr(C.border);
+    const cv=row.getCell(ci+1);cv.value=val;cv.font=font(true,11,'1F4E79');cv.fill=fill(C.valueBg);cv.alignment=aln('center','middle');cv.border=bdr(C.border);
+  });row.commit();R++;}
+  {const row=ws.getRow(R);row.height=20;ws.mergeCells(R,5,R,6);
+  [['Cᵤ (Uniformity)',cu],['Cc (Curvature)',cc],['GW/SW Check',cuCcCheck]].forEach(([lbl,val],i)=>{
+    const ci=i*2+1;if(i===2&&ci>5)return;
+    const ck=row.getCell(ci);ck.value=lbl;ck.font=font(true,10,'000000');ck.fill=fill(C.labelBg);ck.alignment=aln('left','middle');ck.border=bdr(C.border);
+    const cv=row.getCell(ci+1);cv.value=val;cv.font=font(true,11,i<2?'8B4500':'155724');cv.fill=fill(i<2?'FFF9C4':C.valueBg);cv.alignment=aln('center','middle');cv.border=bdr(C.border);
+  });
+  /* GW/SW check spans cols 5-6 (already merged above — do NOT re-merge) */
+  {const ck=row.getCell(5);ck.value='GW/SW Check';ck.font=font(true,10,'000000');ck.fill=fill(C.labelBg);ck.alignment=aln('left','middle');ck.border=bdr(C.border);}
+  {const cv=row.getCell(6);cv.value=cuCcCheck;cv.font=font(false,9,'155724');cv.fill=fill(C.valueBg);cv.alignment=aln('center','middle',true);cv.border=bdr(C.border);}
+  row.commit();R++;}
+  blank();
+
+  /* ══════════════════════════════════
+     6. PARTICLE SIZE FRACTIONS
+  ══════════════════════════════════ */
+  secHdr('6 — PARTICLE SIZE FRACTIONS');
+  colHdr(['Fraction / الفصيلة','% of Total','','','',''],24,[[2,6]]);
+  [
+    ['Gravel  (> 4.75 mm)',pGravel,'1F4E79'],
+    ['Sand  (4.75 – 0.075 mm)',pSand,'1F6B3A'],
+    ['Fines  (< 0.075 mm)',pFines,'8B4500'],
+  ].forEach(([label,val,fg],idx)=>{
+    const bg=idx%2===0?C.row1:C.row2;
+    const row=ws.getRow(R);row.height=20;ws.mergeCells(R,2,R,6);
+    const c1=row.getCell(1);c1.value=label;c1.font=font(false,10,'000000');c1.fill=fill(bg);c1.alignment=aln('left','middle');c1.border=bdr(C.border);
+    const c2=row.getCell(2);c2.value=val;c2.font=font(true,12,fg);c2.fill=fill(bg);c2.alignment=aln('center','middle');c2.border=bdr(C.border);
+    row.commit();R++;
+  });
+  blank();
+
+  /* ══════════════════════════════════
+     7. SOIL CLASSIFICATION
+  ══════════════════════════════════ */
+  secHdr('7 — SOIL CLASSIFICATION');
+  colHdr(['System','Symbol','Group Name','','Application / Use',''],28,[[3,4]]);
+
+  /* USCS row */
+  {const row=ws.getRow(R);row.height=24;ws.mergeCells(R,3,R,4);
+  [{c:1,v:'USCS (ASTM D2487)',bold:true,fg:'5B2D8E',bg:C.uscsBg},
+   {c:2,v:uscsSymbol,bold:true,fg:'FFFFFF',bg:'5B2D8E'},
+   {c:3,v:uscsName,bold:false,fg:'000000',bg:C.uscsBg},
+   {c:5,v:uscsUse,bold:false,fg:'333333',bg:C.uscsBg},
+  ].forEach(({c,v,bold,fg,bg})=>{
+    const cell=row.getCell(c);cell.value=v;cell.font=font(bold,10,fg);cell.fill=fill(bg);cell.alignment=aln('center','middle',true);cell.border=bdr(C.border);
+  });
+  ws.mergeCells(R,5,R,6);row.commit();R++;}
+
+  /* AASHTO row */
+  {const row=ws.getRow(R);row.height=24;ws.mergeCells(R,3,R,4);
+  [{c:1,v:'AASHTO (M 145)',bold:true,fg:'8B4500',bg:C.aashtoBg},
+   {c:2,v:aashtoSymbol+(aashtoGI!=='—'?'\n'+aashtoGI:''),bold:true,fg:'FFFFFF',bg:'8B4500'},
+   {c:3,v:aashtoName,bold:false,fg:'000000',bg:C.aashtoBg},
+   {c:5,v:aashtoUse||'—',bold:false,fg:'333333',bg:C.aashtoBg},
+  ].forEach(({c,v,bold,fg,bg})=>{
+    const cell=row.getCell(c);cell.value=v;cell.font=font(bold,10,fg);cell.fill=fill(bg);cell.alignment=aln('center','middle',true);cell.border=bdr(C.border);
+  });
+  ws.mergeCells(R,5,R,6);row.commit();R++;}
+
+  blank();
+
+  /* ══════════════════════════════════
+     8. GRADATION CURVE
+  ══════════════════════════════════ */
+  secHdr('8 — GRADATION CURVE / منحنى التدرج الحبيبي');
+  const rChartStart=R;
+  for(let i=0;i<24;i++){ws.getRow(R).height=18;R++;}
+  ws.mergeCells(rChartStart,1,R-1,6);
+  {const c=ws.getRow(rChartStart).getCell(1);c.fill=fill(C.chartBg);c.alignment=aln('center','middle');}
+
+  /* ══════════════════════════════════
+     GENERATE FILE
+  ══════════════════════════════════ */
+  function _buildAndDownload(chartBase64){
+    if(chartBase64){
+      try{
+        const b64=chartBase64.replace(/^data:image\/png;base64,/,'');
+        const imgId=wb.addImage({base64:b64,extension:'png'});
+        ws.addImage(imgId,{tl:{col:0,row:rChartStart-1},br:{col:6,row:R-1},editAs:'oneCell'});
+      }catch(e){console.warn('Chart embed:',e);}
     }
-  });
+    wb.xlsx.writeBuffer().then(buf=>{
+      const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const sNo=(p.sampleNo||'Sample').replace(/[^\w\u0600-\u06FF_-]/g,'_');
+      a.href=url;a.download='Sieve_Report_'+sNo+'_'+today.replace(/\//g,'-')+'.xlsx';
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+      _toast('✅ تم تصدير ملف Excel بنجاح / Excel exported successfully');
+    }).catch(e=>{console.error(e);_toast('❌ خطأ في التصدير','#c0392b');});
+  }
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Gradation Report');
-
-  /* ── Download ── */
-  const sNo=(p.sampleNo||'Sample').replace(/[^\w\u0600-\u06FF_-]/g,'_');
-  XLSX.writeFile(wb, 'Sieve_Report_'+sNo+'_'+today.replace(/\//g,'-')+'.xlsx');
-
-  /* Toast */
-  const t=document.createElement('div');
-  t.textContent='\u2705 \u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0645\u0644\u0641 Excel \u0628\u0646\u062c\u0627\u062d / Excel file exported successfully';
-  t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1F6B3A;color:#fff;padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3)';
-  document.body.appendChild(t);
-  setTimeout(()=>{t.style.transition='opacity .5s';t.style.opacity='0';setTimeout(()=>t.remove(),600);},3000);
+  const chartDivId=mode==='double'?'gradChart':mode==='single'?'s1_gradChart':'ss_chart';
+  const chartEl=document.getElementById(chartDivId);
+  if(window.Plotly&&chartEl&&chartEl.querySelector('.plotly')){
+    Plotly.toImage(chartEl,{format:'png',width:960,height:450})
+      .then(img=>_buildAndDownload(img)).catch(()=>_buildAndDownload(null));
+  }else{
+    _buildAndDownload(null);
+  }
 }
 
 /* ── PI Auto-Calculate ── */
